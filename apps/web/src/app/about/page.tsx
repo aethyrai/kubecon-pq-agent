@@ -54,6 +54,28 @@ export default async function Page({ searchParams }: PageProps<'/about'>) {
           </li>
         </ol>
       </section>
+      <section aria-labelledby="with">
+        <h2 id="with">Built with</h2>
+        <p>
+          Built with{' '}
+          <a href="https://gitar.ai" rel="noopener">
+            Gitar
+          </a>
+          ,{' '}
+          <a href="https://www.dash0.com" rel="noopener">
+            Dash0
+          </a>
+          ,{' '}
+          <a href="https://skyhook.io" rel="noopener">
+            Radar
+          </a>
+          , and{' '}
+          <a href="https://www.elastic.co" rel="noopener">
+            Elasticsearch
+          </a>
+          , on Kubernetes.
+        </p>
+      </section>
       <section aria-labelledby="where">
         <h2 id="where">Where to look</h2>
         <p>
