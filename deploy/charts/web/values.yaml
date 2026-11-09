@@ -5,6 +5,7 @@ image:
 replicas: 2
 host: app.kube.aethyr.cloud
 apiUrl: http://api.conf.svc
+identityUrl: http://identity.aethyr-system.svc
 dash0:
   endpoint: ""
   tokenSecret: dash0-rum

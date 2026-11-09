@@ -11,4 +11,6 @@ spec:
         - podSelector: { matchLabels: { app: aethyr-node } }
         - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: conf } }
           podSelector: { matchLabels: { app: api } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: conf } }
+          podSelector: { matchLabels: { app: web } }
       ports: [{ protocol: TCP, port: 8082 }]

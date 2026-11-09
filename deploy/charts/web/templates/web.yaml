@@ -27,6 +27,7 @@ spec:
           ports: [{ name: http, containerPort: 3000 }]
           env:
             - { name: API_URL, value: {{ .Values.apiUrl | quote }} }
+            - { name: IDENTITY_URL, value: {{ .Values.identityUrl | quote }} }
             - { name: NEXT_PUBLIC_DASH0_ENDPOINT, value: {{ .Values.dash0.endpoint | quote }} }
             - name: NEXT_PUBLIC_DASH0_TOKEN
               valueFrom: { secretKeyRef: { name: {{ .Values.dash0.tokenSecret }}, key: token, optional: true } }
