@@ -30,11 +30,19 @@ export default async function Page({ params, searchParams }: PageProps<'/rooms/[
       </p>
       <section aria-labelledby="access">
         <h2 id="access">Accessibility</h2>
-        <ul className="facts">
-          {facts.map((f) => (
-            <li key={f}>{f}</li>
-          ))}
-        </ul>
+        {mode === 'reader' ? (
+          <ol className="facts">
+            {facts.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ol>
+        ) : (
+          <ul className="facts">
+            {facts.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+        )}
       </section>
       <p className="actions">
         <a href={`/schedule/2026-11-10?mode=${mode}`}>Back to the schedule</a>

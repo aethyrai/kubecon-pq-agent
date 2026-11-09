@@ -25,6 +25,10 @@ export function Ruler({
   const columns = `3.5rem repeat(${venues.length}, minmax(0, 1fr))`;
   return (
     <section className="ruler" aria-label={label}>
+      <p className="ruler-key">
+        Hours run down, venues run across, and each talk sits at its real time. Two talks side by
+        side overlap. Your picks are filled in.
+      </p>
       <div className="ruler-head" style={{ gridTemplateColumns: columns }}>
         <span aria-hidden="true" />
         {venues.map((v) => (
