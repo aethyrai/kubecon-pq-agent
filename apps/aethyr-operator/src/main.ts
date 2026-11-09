@@ -123,10 +123,17 @@ function watch<T>(
       log.warn({ plural, name: obj.metadata?.name }, 'object failed schema; ignored');
       return;
     }
-    store.set(
-      key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace }),
-      parsed.data,
+    const k = key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace });
+    const fp = fingerprint(
+      parsed.data as {
+        spec: unknown;
+        status?: unknown;
+        metadata: { generation?: number | undefined };
+      },
     );
+    store.set(k, parsed.data);
+    if (seen.get(k) === fp) return; // status-only change, usually our own patch: no reconcile
+    seen.set(k, fp);
     schedule();
   };
   informer.on('add', upsert);
