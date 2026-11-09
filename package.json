@@ -1,0 +1,26 @@
+{
+  "name": "kubecon-pq-agent",
+  "private": true,
+  "version": "0.0.0",
+  "description": "KubeCon NA 2026 conference agent over an Aethyr post-quantum tunnel",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "scripts/ws.sh typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "scripts/ws.sh test",
+    "helm:lint": "scripts/helm-lint.sh",
+    "kubeconform": "scripts/kubeconform.sh"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.4",
+    "typescript": "5.9.3"
+  }
+}
