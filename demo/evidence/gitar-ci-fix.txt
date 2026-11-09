@@ -1,0 +1,22 @@
+# gitar-ci-fix
+recorded: 2026-11-09T14:43:33-07:00  host: aethyr-core  commit: 3d825da
+
+```
+$ sh -c gh pr view 55 --repo aethyrai/kubecon-pq-agent --json number,title,labels,commits -q "\"PR \(.number) \(.title) labels=\([.labels[].name]|join(\",\"))\", (.commits[]|\"commit \(.oid[0:7]) \(.messageHeadline) by \(.authors[0].name)\")"; echo; echo "CI after the Gitar commit:"; gh pr checks 55 --repo aethyrai/kubecon-pq-agent | awk "{print \$1, \$2}"; echo; echo "final diff:"; gh pr diff 55 --repo aethyrai/kubecon-pq-agent | grep "^[+-]" | grep -v "^+++\|^---"
+PR 55 Add conflict scoring to recommend labels=gitar-managed
+commit 6172e94 Add conflict scoring to recommend by Asclepius9
+commit a8177ce fix: use numeric conflict weight by Gitar
+
+CI after the Gitar commit:
+helm-lint pass
+kubeconform pass
+lint pass
+test pass
+typecheck pass
+
+final diff:
++
++/** Conflict scoring weight for recommend: higher means overlapping sessions are penalised more. */
++export const CONFLICT_WEIGHT: number = 0.35;
+exit: 0
+```
