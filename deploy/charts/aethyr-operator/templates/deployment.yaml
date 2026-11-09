@@ -14,6 +14,8 @@ spec:
       labels: { app: aethyr-operator }
     spec:
       serviceAccountName: aethyr-operator
+      imagePullSecrets:
+        - name: ghcr-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
