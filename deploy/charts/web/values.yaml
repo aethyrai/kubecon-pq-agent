@@ -1,0 +1,13 @@
+image:
+  repository: ghcr.io/aethyrai/kubecon-pq-agent/web
+  tag: latest
+  pullPolicy: IfNotPresent
+replicas: 2
+host: app.kube.aethyr.cloud
+apiUrl: http://api.conf.svc
+dash0:
+  endpoint: ""
+  tokenSecret: dash0-rum
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: "1", memory: 512Mi }
