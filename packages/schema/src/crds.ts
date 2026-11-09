@@ -5,6 +5,9 @@ export const API_GROUP = 'aethyr.io';
 export const API_VERSION = 'v1alpha1';
 
 export const Kem = z.enum(['ML-KEM-768', 'ML-KEM-1024']);
+
+/** Conflict scoring weight for recommend: higher means overlapping sessions are penalised more. */
+export const CONFLICT_WEIGHT: number = '0.35';
 export const Signature = z.enum(['ML-DSA-65', 'ML-DSA-87']);
 export const Hybrid = z.enum(['X25519', 'none']);
 export const Profile = z.enum(['hackathon', 'cnsa2']);
