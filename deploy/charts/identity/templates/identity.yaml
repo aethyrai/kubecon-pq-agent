@@ -19,10 +19,28 @@ rules:
   - apiGroups: [""]
     resources: [secrets]
     verbs: [get, create, update]
-    resourceNames: [aethyr-peer-tokens]
+    resourceNames: [aethyr-peer-tokens, aethyr-trail]
   - apiGroups: [""]
     resources: [secrets]
     verbs: [create]
+---
+# CryptoPolicy is cluster-scoped: identity records every rotation in its signed trail.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: identity-cryptopolicy-reader
+rules:
+  - apiGroups: [aethyr.io]
+    resources: [cryptopolicies]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: identity-cryptopolicy-reader
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: identity-cryptopolicy-reader }
+subjects:
+  - { kind: ServiceAccount, name: identity, namespace: {{ .Release.Namespace }} }
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
