@@ -1,0 +1,26 @@
+# ServiceAccount for demo/chaos/kill-api-pod.sh: may delete pods labeled app=api in conf, nothing else.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-pod-killer
+  namespace: conf
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chaos-pod-killer
+  namespace: conf
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chaos-pod-killer
+  namespace: conf
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: chaos-pod-killer }
+subjects:
+  - { kind: ServiceAccount, name: chaos-pod-killer, namespace: conf }

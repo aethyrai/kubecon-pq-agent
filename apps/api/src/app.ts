@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { chaosDelay, mountChaos } from './chaos.js';
 import { log } from './log.js';
 
 export interface Readiness {
@@ -29,8 +30,9 @@ export const STUB_SESSION: SessionStub = {
   captioned: true,
 };
 
-export function buildApp(ready: Readiness): Hono {
+export function buildApp(ready: Readiness, env: NodeJS.ProcessEnv = process.env): Hono {
   const app = new Hono();
+  mountChaos(app, env);
 
   app.get('/healthz', (c) => c.json({ status: 'ok' }));
 
@@ -39,8 +41,9 @@ export function buildApp(ready: Readiness): Hono {
     return c.json({ status: es ? 'ready' : 'not-ready', elasticsearch: es }, es ? 200 : 503);
   });
 
-  app.get('/search', (c) => {
+  app.get('/search', async (c) => {
     const q = c.req.query('q') ?? '';
+    await chaosDelay();
     log.info({ q }, 'search (stub)');
     return c.json({ query: q, hits: [STUB_SESSION], total: 1, stub: true });
   });
