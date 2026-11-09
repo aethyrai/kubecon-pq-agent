@@ -52,3 +52,25 @@ ul.cards li {
   outline: 3px solid Highlight;
   outline-offset: 2px;
 }
+.badge.warn {
+  border-color: #b00020;
+}
+li.conflict {
+  border-color: #b00020;
+}
+.muted {
+  color: GrayText;
+  font-weight: normal;
+}
+nav[aria-label="Days"] a[aria-current="page"] {
+  font-weight: bold;
+  text-decoration: none;
+}
+select {
+  font: inherit;
+  padding: 0.4rem;
+}
+output.block {
+  display: block;
+  margin: 0.5rem 0;
+}

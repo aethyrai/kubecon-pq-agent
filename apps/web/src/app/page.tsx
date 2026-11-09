@@ -1,5 +1,6 @@
-import { formatTime, type SearchResponse, search } from '@/lib/api';
+import { type SearchResponse, search } from '@/lib/api';
 import { parseMode } from '@/lib/mode';
+import { SessionCardView } from './_components/session-card';
 
 export default async function Page({ searchParams }: PageProps<'/'>) {
   const sp = await searchParams;
@@ -9,7 +10,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
   let error = '';
   if (q) {
     try {
-      result = await search(q);
+      result = await search(q, mode);
     } catch (e) {
       error = e instanceof Error ? e.message : 'search failed';
     }
@@ -39,14 +40,7 @@ export default async function Page({ searchParams }: PageProps<'/'>) {
           </h2>
           <ul className="cards">
             {result.hits.map((h) => (
-              <li key={h.id}>
-                <h3>{h.title}</h3>
-                <p>
-                  {h.day} {formatTime(h.start)}–{formatTime(h.end)} · {h.room}
-                  {h.captioned && <span className="badge">Captioned</span>}
-                  {mode !== 'text' && <span className="badge">{h.track}</span>}
-                </p>
-              </li>
+              <SessionCardView key={h.id} s={h} mode={mode} />
             ))}
           </ul>
         </section>
