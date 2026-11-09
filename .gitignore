@@ -11,3 +11,4 @@ coverage/
 # demo evidence screenshots are committed on purpose
 *.tsbuildinfo
 .model-cache/
+.claude/
