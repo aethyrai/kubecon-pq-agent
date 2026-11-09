@@ -73,7 +73,22 @@ export default async function Page({ searchParams }: PageProps<'/about'>) {
           <a href="https://www.elastic.co" rel="noopener">
             Elasticsearch
           </a>
+          , and{' '}
+          <a href="https://opentelemetry.io" rel="noopener">
+            OpenTelemetry
+          </a>
           , on Kubernetes.
+        </p>
+      </section>
+      <section aria-labelledby="dash0">
+        <h2 id="dash0">What you see in Dash0</h2>
+        <p>
+          Each deploy leaves a mark. Argo CD sync hooks post a dash0.deployment event, so every
+          promotion and every failed sync appears on the service charts with its image tag.
+        </p>
+        <p>
+          Every log line carries its trace id. Open a search in Dash0 logs and its full trace opens
+          with it, from the web client through the api to Elasticsearch.
         </p>
       </section>
       <section aria-labelledby="where">
