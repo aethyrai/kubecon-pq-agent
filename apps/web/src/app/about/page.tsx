@@ -92,7 +92,8 @@ export default async function Page({ searchParams }: PageProps<'/about'>) {
         </p>
         <p>
           Inside each search trace, the search.leg.bm25 and search.leg.knn spans show which
-          retrieval leg found each hit, and search.hybrid records how many results came from both.
+          retrieval leg found each hit, and search.hybrid records the fused total and how many hits
+          only the vector leg found.
         </p>
       </section>
       <section aria-labelledby="where">
