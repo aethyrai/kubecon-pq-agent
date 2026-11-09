@@ -48,6 +48,8 @@ spec:
       labels: { app: identity }
     spec:
       serviceAccountName: identity
+      imagePullSecrets:
+        - name: ghcr-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
