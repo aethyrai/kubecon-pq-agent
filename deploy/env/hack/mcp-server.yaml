@@ -1,4 +1,4 @@
 image:
-  tag: latest
+  tag: sha-305623a
 env:
   - { name: API_URL, value: http://api.conf.svc }

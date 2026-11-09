@@ -1,4 +1,4 @@
 image:
-  tag: latest
+  tag: sha-0722e21
 dash0:
   endpoint: https://ingress.us-west-2.aws.dash0.com
