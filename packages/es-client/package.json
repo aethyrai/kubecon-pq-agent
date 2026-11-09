@@ -1,0 +1,23 @@
+{
+  "name": "@kubecon-pq-agent/es-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
+    "apply-mappings": "tsc -p tsconfig.json && node dist/apply-mappings.js"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "9.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0"
+  }
+}
