@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+body {
+  margin: 0 auto;
+  max-width: 56rem;
+  padding: 1rem;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+}
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  background: Canvas;
+  padding: 0.5rem;
+}
+nav a {
+  margin-right: 0.75rem;
+}
+input[type="search"] {
+  font: inherit;
+  padding: 0.5rem;
+  width: 100%;
+  max-width: 32rem;
+}
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+}
+ul.cards {
+  list-style: none;
+  padding: 0;
+}
+ul.cards li {
+  border: 1px solid GrayText;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+}
+.badge {
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.85em;
+  margin-left: 0.5rem;
+}
+:focus-visible {
+  outline: 3px solid Highlight;
+  outline-offset: 2px;
+}

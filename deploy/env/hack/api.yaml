@@ -10,8 +10,8 @@ secretEnv:
   - { name: CHAOS_TOKEN, secret: chaos-token, key: token }
 env:
   - { name: DEMO_MODE, value: "true" }
-  - { name: HF_HUB_OFFLINE, value: "1" }
-  - { name: HF_HUB_CACHE, value: /app/.model-cache }
+  - { name: MODEL_OFFLINE, value: "1" }
+  - { name: MODEL_CACHE_DIR, value: /app/.model-cache }
 resources:
   requests: { cpu: 250m, memory: 512Mi }
   limits: { cpu: "2", memory: 1Gi }

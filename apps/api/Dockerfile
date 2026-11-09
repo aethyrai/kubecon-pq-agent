@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-alpine AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/es-client/package.json packages/es-client/
@@ -10,12 +10,12 @@ COPY packages/es-client packages/es-client
 COPY packages/embeddings packages/embeddings
 COPY apps/api apps/api
 RUN npm run build -w @kubecon-pq-agent/es-client && npm run build -w @kubecon-pq-agent/embeddings && npm run build -w @kubecon-pq-agent/api \
- && HF_HUB_CACHE=/app/.model-cache node -e "import('@huggingface/transformers').then(async ({pipeline})=>{const p=await pipeline('feature-extraction','Xenova/bge-small-en-v1.5',{dtype:'q8'});await p('warm',{pooling:'cls',normalize:true});})" \
+ && MODEL_CACHE_DIR=/app/.model-cache node -e "import('@kubecon-pq-agent/embeddings').then(async (m) => { await new m.LocalEmbedder().embed(['warm']); })" \
  && npm prune --omit=dev
 
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 WORKDIR /app
-ENV NODE_ENV=production PORT=8080 HF_HUB_CACHE=/app/.model-cache HF_HUB_OFFLINE=1
+ENV NODE_ENV=production PORT=8080 MODEL_CACHE_DIR=/app/.model-cache MODEL_OFFLINE=1
 USER 10001:10001
 COPY --from=build --chown=10001:10001 /app/node_modules node_modules
 COPY --from=build --chown=10001:10001 /app/packages/es-client/package.json packages/es-client/package.json
