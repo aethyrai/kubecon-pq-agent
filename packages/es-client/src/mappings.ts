@@ -1,7 +1,7 @@
 import type { estypes } from '@elastic/elasticsearch';
 
-/** Dimension of OpenAI text-embedding-3-small. */
-export const EMBEDDING_DIMS = 1536;
+/** Dimension of BAAI/bge-small-en-v1.5, the default local embedder. OpenAI text-embedding-3-small needs 1536. */
+export const EMBEDDING_DIMS = Number(process.env.EMBEDDING_DIMS ?? 384);
 
 export const INDEX_NAMES = [
   'sessions',
