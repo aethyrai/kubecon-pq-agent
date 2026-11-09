@@ -1,0 +1,32 @@
+apiVersion: aethyr.io/v1alpha1
+kind: CryptoPolicy
+metadata:
+  name: hackathon
+spec:
+  kem: ML-KEM-768
+  hybrid: X25519
+  signature: ML-DSA-65
+  rekeyInterval: 15m
+  profile: hackathon
+---
+apiVersion: aethyr.io/v1alpha1
+kind: PQTunnel
+metadata:
+  name: api
+  namespace: conf
+spec:
+  listener: { port: 7443, protocol: TCP }
+  policyRef: { name: hackathon }
+  upstreams:
+    - { service: api, port: 80, localPort: 8080 }
+---
+apiVersion: aethyr.io/v1alpha1
+kind: PQTunnel
+metadata:
+  name: mcp-server
+  namespace: conf
+spec:
+  listener: { port: 7444, protocol: TCP }
+  policyRef: { name: hackathon }
+  upstreams:
+    - { service: mcp-server, port: 80, localPort: 8081 }

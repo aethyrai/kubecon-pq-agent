@@ -1,0 +1,88 @@
+# Generates, once: the tunnel CA, the gateway (responder) cert, a laptop (initiator) cert, and the
+# gateway's identity seed. Nothing here is sealed because none of it ever leaves the cluster except
+# the client cert, which the laptop fetches with kubectl.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aethyr-bootstrap
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aethyr-bootstrap
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aethyr-bootstrap
+  namespace: {{ .Release.Namespace }}
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: aethyr-bootstrap }
+subjects:
+  - { kind: ServiceAccount, name: aethyr-bootstrap, namespace: {{ .Release.Namespace }} }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aethyr-bootstrap
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: aethyr-bootstrap
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: bootstrap
+          image: {{ .Values.bootstrap.image }}
+          command: ["sh", "-ec"]
+          args:
+            - |
+              apk add --no-cache curl >/dev/null
+              K=https://kubernetes.default.svc; T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt; NS={{ .Release.Namespace }}
+              have() { curl -sf --cacert $CA -H "Authorization: Bearer $T" $K/api/v1/namespaces/$NS/secrets/$1 >/dev/null; }
+              if have {{ .Values.tlsSecret }} && have {{ .Values.seedSecret }} && have {{ .Values.clientSecret }}; then echo "bootstrap already done"; exit 0; fi
+              cd /tmp
+              openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -days {{ .Values.bootstrap.caDays }} -subj "/CN=aethyr tunnel CA" -keyout ca.key -out ca.crt
+              openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -subj "/CN=aethyr-gateway" -keyout tls.key -out server.csr
+              openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out tls.crt \
+                -extfile <(printf "subjectAltName={{ .Values.bootstrap.serverSans }}\nextendedKeyUsage=serverAuth")
+              openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -subj "/CN=aethyr-client" -keyout client.key -out client.csr
+              openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out client.crt -extfile <(printf "extendedKeyUsage=clientAuth")
+              SEED=$(openssl rand -hex 32)
+              mk() { # name key=file...
+                n=$1; shift; data=""
+                for kv in "$@"; do k=${kv%%=*}; f=${kv#*=}; data="$data\"$k\":\"$(base64 -w0 < $f)\","; done
+                printf '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"%s"},"type":"Opaque","data":{%s}}' "$n" "${data%,}" \
+                  | curl -sf --cacert $CA -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -X POST $K/api/v1/namespaces/$NS/secrets -d @- >/dev/null && echo "created $n"
+              }
+              have {{ .Values.tlsSecret }} || mk {{ .Values.tlsSecret }} tls.crt=tls.crt tls.key=tls.key ca.crt=ca.crt
+              printf '%s' "$SEED" > seed; have {{ .Values.seedSecret }} || mk {{ .Values.seedSecret }} seed=seed
+              have {{ .Values.clientSecret }} || mk {{ .Values.clientSecret }} tls.crt=client.crt tls.key=client.key ca.crt=ca.crt
+              rm -f ca.key seed client.key tls.key
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { medium: Memory }

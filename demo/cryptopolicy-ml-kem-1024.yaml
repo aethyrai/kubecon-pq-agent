@@ -1,0 +1,11 @@
+# The live rotation (SOP 13.2, 2:20): kubectl apply -f demo/cryptopolicy-ml-kem-1024.yaml
+apiVersion: aethyr.io/v1alpha1
+kind: CryptoPolicy
+metadata:
+  name: hackathon
+spec:
+  kem: ML-KEM-1024
+  hybrid: X25519
+  signature: ML-DSA-87
+  rekeyInterval: 15m
+  profile: cnsa2
