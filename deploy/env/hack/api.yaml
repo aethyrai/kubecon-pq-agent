@@ -1,0 +1,15 @@
+image:
+  tag: latest
+hpa:
+  enabled: true
+  min: 2
+  max: 6
+secretEnv:
+  - { name: ELASTICSEARCH_URL, secret: elasticsearch-api-key, key: url }
+  - { name: ELASTICSEARCH_API_KEY, secret: elasticsearch-api-key, key: api-key }
+env:
+  - { name: HF_HUB_OFFLINE, value: "1" }
+  - { name: HF_HUB_CACHE, value: /app/.model-cache }
+resources:
+  requests: { cpu: 250m, memory: 512Mi }
+  limits: { cpu: "2", memory: 1Gi }

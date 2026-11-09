@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "svc.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  strategy:
+    canary:
+      canaryService: {{ .Chart.Name }}-canary
+      stableService: {{ .Chart.Name }}
+      steps:
+        {{- range $i, $w := .Values.canary.steps }}
+        - setWeight: {{ $w }}
+        {{- if lt $w 100 }}
+        - pause: { duration: {{ $.Values.canary.pauseSeconds }}s }
+        {{- end }}
+        {{- end }}
+  template:
+    metadata:
+      labels: {{- include "svc.labels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: {{ .Values.port }} }
+          env:
+            - { name: PORT, value: {{ .Values.port | quote }} }
+            - { name: OTEL_SERVICE_NAME, value: {{ .Chart.Name }} }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: {{ .Values.otel.endpoint }} }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.version={{ .Values.image.tag }},deployment.environment.name=hackathon" }
+            {{- range .Values.env }}
+            - { name: {{ .name }}, value: {{ .value | quote }} }
+            {{- end }}
+            {{- range .Values.secretEnv }}
+            - name: {{ .name }}
+              valueFrom: { secretKeyRef: { name: {{ .secret }}, key: {{ .key }} } }
+            {{- end }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}

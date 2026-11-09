@@ -1,0 +1,4 @@
+image:
+  tag: latest
+env:
+  - { name: API_URL, value: http://api.conf.svc }
