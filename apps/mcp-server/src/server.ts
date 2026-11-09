@@ -14,13 +14,11 @@ export function buildHttpApp(): Hono {
   // Stateless Streamable HTTP: one server + transport per request, so a canary swap loses no session table.
   app.all('/mcp', async (c) => {
     const server = buildMcpServer();
-    const transport = new WebStandardStreamableHTTPServerTransport({});
+    // JSON responses, not SSE: the whole reply is in the body when handleRequest resolves, and the
+    // per-request server and transport are garbage-collected with it.
+    const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });
     await server.connect(transport);
-    try {
-      return await transport.handleRequest(c.req.raw);
-    } finally {
-      await server.close();
-    }
+    return transport.handleRequest(c.req.raw);
   });
   return app;
 }
