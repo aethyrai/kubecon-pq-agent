@@ -1,0 +1,15 @@
+# otel-collector-span-export
+recorded: 2026-11-09T14:19:16-07:00  host: aethyr-core  commit: f32be44
+deployed: web web:sha-f32be44
+deployed: api api:sha-f32be44
+deployed: mcp-server mcp-server:sha-f32be44
+deployed: identity identity:sha-f32be44
+deployed: aethyr-operator aethyr-operator:sha-f32be44
+
+```
+$ sh -c kubectl get --raw /api/v1/namespaces/observability/pods/otel-collector-7745d4bbf7-rt8dd:8888/proxy/metrics | grep -E '^otelcol_(exporter_sent_spans|exporter_send_failed_spans|receiver_accepted_spans)' | sed 's/{[^}]*}//' | awk '{a[$1]+=$2} END{for(k in a) print k, a[k]}'
+otelcol_exporter_sent_spans_total 15578
+otelcol_exporter_send_failed_spans_total 0
+otelcol_receiver_accepted_spans_total 15578
+exit: 0
+```

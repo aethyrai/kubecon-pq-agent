@@ -1,0 +1,22 @@
+# smoke-after-otel-roll
+recorded: 2026-11-09T14:19:16-07:00  host: aethyr-core  commit: f32be44
+deployed: web web:sha-f32be44
+deployed: api api:sha-f32be44
+deployed: mcp-server mcp-server:sha-f32be44
+deployed: identity identity:sha-f32be44
+deployed: aethyr-operator aethyr-operator:sha-f32be44
+
+```
+$ bash demo/smoke.sh
+| check | result | detail
+| --- | --- | ---
+| api /healthz                       | PASS | HTTP 200
+| api /readyz (Elasticsearch)        | PASS | HTTP 200
+| hybrid search returns hits         | PASS | hits=10
+| semantic-only hits present         | PASS | knn-only=2
+| recommend returns session ids      | PASS | ids=1334787,1244695,1362609
+| conflicts computed                 | PASS | conflicts=1 missing=0
+| booths search                      | PASS | n=10 first booth=228
+| mcp initialize through tunnel      | PASS | server info seen=1
+exit: 0
+```
