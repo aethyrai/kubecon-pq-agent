@@ -24,19 +24,19 @@ export default async function Page({ params, searchParams }: PageProps<'/rooms/[
   return (
     <>
       <h1>{byId?.room.name ?? (parts.slice(level ? 2 : 1).join(' | ') || name)}</h1>
-      <p>
+      <p className="lede">
         {venue}
-        {level && <> · {level}</>}
+        {level && <>, {level}</>}
       </p>
       <section aria-labelledby="access">
         <h2 id="access">Accessibility</h2>
-        <ul>
+        <ul className="facts">
           {facts.map((f) => (
             <li key={f}>{f}</li>
           ))}
         </ul>
       </section>
-      <p>
+      <p className="actions">
         <a href={`/schedule/2026-11-10?mode=${mode}`}>Back to the schedule</a>
       </p>
     </>
