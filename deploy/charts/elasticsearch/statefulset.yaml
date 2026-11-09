@@ -28,7 +28,7 @@ metadata:
   name: elasticsearch
   namespace: elastic
 spec:
-  maxUnavailable: 0
+  maxUnavailable: 1
   selector:
     matchLabels: { app: elasticsearch }
 ---
