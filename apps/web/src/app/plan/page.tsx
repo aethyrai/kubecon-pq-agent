@@ -1,6 +1,6 @@
 import { dayLabel, formatTime, planConflicts, timeRange } from '@/lib/api';
 import { parseMode } from '@/lib/mode';
-import { conflictedIds, dropSuggestions, parseIds } from '@/lib/plan';
+import { conflictedIds, dropFor, parseIds } from '@/lib/plan';
 import { shortRoom } from '@/lib/ruler';
 import { Ruler } from '../_components/ruler';
 import { SessionCardView } from '../_components/session-card';
@@ -39,7 +39,6 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
   const bad = conflictedIds(r.conflicts);
   const picked = new Set(ids);
   const byId = new Map(r.sessions.map((s) => [s.id, s]));
-  const drops = dropSuggestions(r.conflicts, r.sessions, ids);
   const sorted = [...r.sessions].sort((a, b) => a.start.localeCompare(b.start));
   const days = [...new Set(sorted.map((s) => s.day))].sort();
   const without = (id: string) => `/plan?mode=${mode}&ids=${ids.filter((x) => x !== id).join(',')}`;
@@ -63,7 +62,7 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
           <h2 id="conflicts">Conflicts</h2>
           <ul>
             {r.conflicts.map((c) => {
-              const drop = drops.has(c.a) ? c.a : c.b;
+              const drop = dropFor(c, r.sessions, ids);
               return (
                 <li key={`${c.a}-${c.b}`}>
                   “{name(c.a)}” and “{name(c.b)}” overlap by {c.overlapMinutes} minute
