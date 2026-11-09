@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </header>
         <main id="main">{children}</main>
         <footer>
-          <p>Built with Gitar, Dash0, Radar, and Elasticsearch.</p>
+          <p>Built with Gitar, Dash0, Radar, Elasticsearch, and OpenTelemetry.</p>
           <p>
             Built on November 9, 2026. Aethyr Node is a pre-existing library.{' '}
             <a href="/about">What was built today</a>
