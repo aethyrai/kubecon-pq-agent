@@ -14,7 +14,12 @@ spec:
     path: deploy/platform/aethyr
   destination:
     server: https://kubernetes.default.svc
+  # The live demo edits the CryptoPolicy spec with kubectl. Argo creates the resource but never
+  # diffs or re-applies its spec, so a sync triggered by an unrelated merge cannot undo the rotation.
+  ignoreDifferences:
+    - group: aethyr.io
+      kind: CryptoPolicy
+      jsonPointers: [/spec]
   syncPolicy:
-    # No selfHeal: the live demo edits the CryptoPolicy with kubectl and Argo must not revert it.
     automated: { prune: false, selfHeal: false }
-    syncOptions: [ServerSideApply=true]
+    syncOptions: [ServerSideApply=true, RespectIgnoreDifferences=true]
