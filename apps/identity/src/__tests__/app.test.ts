@@ -106,7 +106,7 @@ test('only the token hash is ever stored', () => {
   assert.equal(isExpired({ peerId: 'p', issuedAt: '', expiresAt: '2000-01-01T00:00:00Z' }), true);
 });
 
-test('register and verify append signed trail records, and /trail serves a verified chain', async () => {
+test('register appends two signed records, verify appends none, and /trail serves a verified chain', async () => {
   const now = new Date('2026-11-09T19:00:00Z');
   const trail = await Trail.open(new MemoryTrailStore(), () => now);
   const app = buildApp(registry(true), new MemoryTokenStore(), () => now, trail);
@@ -129,10 +129,10 @@ test('register and verify append signed trail records, and /trail serves a verif
   };
   assert.equal(body.algorithm, 'ML-DSA-65');
   assert.equal(body.publicKey, trail.publicKey);
-  assert.deepEqual(body.verification, { ok: true, count: 3 });
+  assert.deepEqual(body.verification, { ok: true, count: 2 });
   assert.deepEqual(
     body.records.map((r) => r.kind),
-    ['peer.registered', 'token.issued', 'token.verified'],
+    ['peer.registered', 'token.issued'],
   );
   assert.equal(body.records[0]?.data.peer, peerIdFromPublicKey(PUB));
   const key = await app.request('/trail/key');
@@ -142,7 +142,7 @@ test('register and verify append signed trail records, and /trail serves a verif
 test('/trail caps the window and reports total and from', async () => {
   const now = new Date('2026-11-09T19:00:00Z');
   const trail = await Trail.open(new MemoryTrailStore(), () => now);
-  for (let i = 0; i < 7; i++) await trail.append('token.verified', { peer: `peer-${i}` });
+  for (let i = 0; i < 7; i++) await trail.append('token.issued', { peer: `peer-${i}` });
   const app = buildApp(registry(true), new MemoryTokenStore(), () => now, trail);
   const body = (await (await app.request('/trail?limit=3')).json()) as {
     total: number;
@@ -164,4 +164,33 @@ test('/trail caps the window and reports total and from', async () => {
 test('/trail answers 404 when the trail is not enabled', async () => {
   const app = buildApp(registry(true), new MemoryTokenStore());
   assert.equal((await app.request('/trail')).status, 404);
+});
+
+test('a trail write failure is reported but never fails /register', async () => {
+  const now = new Date('2026-11-09T19:00:00Z');
+  const broken = {
+    loadSeed: async () => undefined,
+    saveSeed: async () => undefined,
+    loadTail: async () => ({ records: [], total: 0 }),
+    append: async () => {
+      throw new Error('secret quota');
+    },
+  };
+  const trail = await Trail.open(broken, () => now);
+  const errors: string[] = [];
+  const app = buildApp(
+    registry(true),
+    new MemoryTokenStore(),
+    () => now,
+    trail,
+    (err, kind) => errors.push(`${kind}:${err instanceof Error ? err.message : 'x'}`),
+  );
+  const res = await app.request('/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ publicKey: PUB, algorithm: 'ML-DSA-65' }),
+  });
+  assert.equal(res.status, 201);
+  assert.deepEqual(errors, ['peer.registered:secret quota', 'token.issued:secret quota']);
+  assert.equal(trail.total, 0);
 });

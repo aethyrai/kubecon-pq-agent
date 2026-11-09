@@ -1,25 +1,50 @@
 #!/usr/bin/env node
 // Verify a downloaded post-quantum trail offline.
-//   node demo/verify-trail.mjs pq-trail.json
+//   node demo/verify-trail.mjs pq-trail.json --key <base64 public key>
+//   node demo/verify-trail.mjs pq-trail.json --key-url http://127.0.0.1:8082/trail/key
+// The public key must come from a source other than the file under test: a key you fetched
+// from the identity service yourself, or one you wrote down earlier. A file that carries its
+// own key could be re-signed by anyone. The fingerprint printed first is sha256 of the key,
+// to compare with the /trail page or /trail/key.
 // Recomputes each record's canonical bytes and SHA-256, checks the chain links and sequence,
-// and verifies every ML-DSA-65 signature against the public key inside the file. Mirrors
-// apps/identity/src/trail.ts; keep the canonical format in step.
+// and verifies every ML-DSA-65 signature. Mirrors apps/identity/src/trail.ts.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
-const file = process.argv[2];
-if (!file) {
-  console.error('usage: node demo/verify-trail.mjs <pq-trail.json>');
+const args = process.argv.slice(2);
+const file = args.find((a) => !a.startsWith('--'));
+const keyArg = args[args.indexOf('--key') + 1];
+const keyUrl = args[args.indexOf('--key-url') + 1];
+if (!file || (!args.includes('--key') && !args.includes('--key-url'))) {
+  console.error(
+    'usage: node demo/verify-trail.mjs <pq-trail.json> --key <base64> | --key-url <url>',
+  );
+  console.error('The key must come from outside the file; the embedded key is not trusted.');
   process.exit(2);
 }
+let publicKeyB64 = keyArg;
+if (args.includes('--key-url')) {
+  const res = await fetch(keyUrl);
+  if (!res.ok) {
+    console.error(`key fetch failed: HTTP ${res.status}`);
+    process.exit(2);
+  }
+  publicKeyB64 = (await res.json()).publicKey;
+}
+const pk = Buffer.from(publicKeyB64, 'base64');
+const fingerprint = `sha256:${createHash('sha256').update(pk).digest('hex').slice(0, 32)}`;
+console.log(`key ${fingerprint} (from ${args.includes('--key-url') ? keyUrl : '--key'})`);
 const trail = JSON.parse(readFileSync(file, 'utf8'));
-const pk = Buffer.from(trail.publicKey, 'base64');
+if (trail.publicKey && trail.publicKey !== publicKeyB64)
+  console.log(
+    'note: the key inside the file differs from the key supplied; the supplied key is used',
+  );
 const GENESIS = '0'.repeat(64);
 
 const canonical = (r) => {
   const data = JSON.stringify(
-    Object.fromEntries(Object.entries(r.data).sort(([a], [b]) => a.localeCompare(b))),
+    Object.fromEntries(Object.entries(r.data).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
   );
   return `pqtrail|v1|${r.seq}|${r.at}|${r.kind}|${data}|${r.prev}`;
 };

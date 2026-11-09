@@ -13,7 +13,7 @@
     "@hono/node-server": "2.1.6",
     "@kubecon-pq-agent/schema": "0.0.0",
     "@kubernetes/client-node": "2.0.2",
-    "@noble/post-quantum": "^0.5.4",
+    "@noble/post-quantum": "0.5.4",
     "hono": "4.13.17",
     "pino": "10.4.0",
     "zod": "4.6.7"

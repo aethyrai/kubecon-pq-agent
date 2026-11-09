@@ -64,8 +64,8 @@ export default async function Page({ searchParams }: PageProps<'/trail'>) {
               : `Chain broken at record ${t.verification.brokenAt}: ${t.verification.reason}.`}
           </output>
           <p className="meta">
-            Signing key {t.algorithm}, public key starts {t.publicKey.slice(0, 16)}. Head hash{' '}
-            {t.head.slice(0, 16)}.
+            Signing key {t.algorithm}, fingerprint {t.fingerprint ?? t.publicKey.slice(0, 16)}. Head
+            hash {t.head.slice(0, 16)}.
             {t.total !== undefined && t.total > t.records.length
               ? ` Showing the last ${t.records.length} of ${t.total} records.`
               : ''}{' '}
@@ -73,7 +73,7 @@ export default async function Page({ searchParams }: PageProps<'/trail'>) {
             <a href="https://github.com/aethyrai/kubecon-pq-agent/blob/main/demo/verify-trail.mjs">
               demo/verify-trail.mjs
             </a>
-            .
+            , giving it the public key from a source you trust and comparing the fingerprint.
           </p>
           {t.records.length === 0 && (
             <p className="empty">
@@ -95,7 +95,7 @@ export default async function Page({ searchParams }: PageProps<'/trail'>) {
                       {r.at.slice(0, 10)}
                     </div>
                     <div className="body">
-                      <h3>{KIND[r.kind] ?? r.kind}</h3>
+                      <h2>{KIND[r.kind] ?? r.kind}</h2>
                       <p className="meta">{describe(r)}</p>
                       {mode !== 'text' && (
                         <p className="badges">

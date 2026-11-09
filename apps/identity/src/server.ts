@@ -3,7 +3,7 @@ import { API_GROUP, API_VERSION, CryptoPolicy, type PQPeerSpec } from '@kubecon-
 import * as k8s from '@kubernetes/client-node';
 import pino from 'pino';
 import { buildApp, type PeerRegistry } from './app.js';
-import { type PolicySnapshot, recordPolicyChanges } from './policy-watch.js';
+import { type PolicySnapshot, recordPolicyChanges, snapshotFromRecords } from './policy-watch.js';
 import { isNotFound, SecretTokenStore } from './store.js';
 import { Trail } from './trail.js';
 import { SecretTrailStore } from './trail-store.js';
@@ -76,10 +76,17 @@ const registry: PeerRegistry = {
 };
 
 const trail = await Trail.open(new SecretTrailStore(core, ns));
-log.info({ publicKey: trail.publicKey, records: trail.list().length }, 'trail open');
+log.info(
+  { fingerprint: trail.fingerprint, window: trail.list().length, total: trail.total },
+  'trail open',
+);
 
-/** Poll CryptoPolicy every 5 s and write a signed record on first sight and on every rotation. */
-let snapshot = new Map<string, PolicySnapshot>();
+/**
+ * Poll CryptoPolicy every 5 s and write a signed record on first sight and on every rotation.
+ * The starting snapshot comes from the trail itself, so a restart compares against what was
+ * last recorded instead of re-recording every policy.
+ */
+let snapshot: Map<string, PolicySnapshot> = snapshotFromRecords(trail.list());
 async function pollPolicies(): Promise<void> {
   try {
     // CryptoPolicy is cluster-scoped.
@@ -107,7 +114,13 @@ async function pollPolicies(): Promise<void> {
 await pollPolicies();
 setInterval(() => void pollPolicies(), 5000);
 
-const app = buildApp(registry, new SecretTokenStore(core, ns), () => new Date(), trail);
+const app = buildApp(
+  registry,
+  new SecretTokenStore(core, ns),
+  () => new Date(),
+  trail,
+  (err, kind) => log.warn({ err, kind }, 'trail write failed; request completed without a record'),
+);
 const port = Number(process.env.PORT ?? 8082);
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) =>
   log.info({ port: info.port }, 'identity listening'),

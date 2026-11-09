@@ -6,6 +6,11 @@
  * The hash is SHA-256 of those bytes. The signature is ML-DSA-65 over the same bytes.
  * The prefix is domain separation, so a record lifted from another chain cannot verify here.
  *
+ * Storage is segmented: the store keeps the seed and an index, plus one segment per
+ * SEGMENT_SIZE records, because one signature is about 4.4 KB and a Secret holds 1 MiB. The
+ * service keeps only the newest window in memory; a window verifies from its first record's
+ * own previous hash.
+ *
  * Honesty: these are signatures by our own service over our own records. They prove the
  * integrity and order of what the service recorded, not third-party attestation.
  */
@@ -14,6 +19,10 @@ import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
 export const TRAIL_ALGORITHM = 'ML-DSA-65';
 export const GENESIS_HASH = '0'.repeat(64);
+/** Records per storage segment. 200 signed records are about 0.9 MiB. */
+export const SEGMENT_SIZE = 200;
+/** Most records the service keeps in memory and serves. */
+export const WINDOW = 500;
 
 export type TrailKind =
   | 'peer.registered'
@@ -34,32 +43,47 @@ export interface TrailRecord {
 }
 
 export interface TrailStore {
-  load(): Promise<{ seed: string | undefined; records: TrailRecord[] }>;
-  save(seed: string, records: TrailRecord[]): Promise<void>;
+  loadSeed(): Promise<string | undefined>;
+  saveSeed(seed: string): Promise<void>;
+  /** The newest records, at most `max`, in order, plus the total count stored. */
+  loadTail(max: number): Promise<{ records: TrailRecord[]; total: number }>;
+  /** Persist one record. Must reject, not silently drop, when the write fails. */
+  append(rec: TrailRecord): Promise<void>;
 }
 
 export class MemoryTrailStore implements TrailStore {
   private seed: string | undefined;
   private records: TrailRecord[] = [];
-  async load(): Promise<{ seed: string | undefined; records: TrailRecord[] }> {
-    return { seed: this.seed, records: [...this.records] };
+  async loadSeed(): Promise<string | undefined> {
+    return this.seed;
   }
-  async save(seed: string, records: TrailRecord[]): Promise<void> {
+  async saveSeed(seed: string): Promise<void> {
     this.seed = seed;
-    this.records = [...records];
+  }
+  async loadTail(max: number): Promise<{ records: TrailRecord[]; total: number }> {
+    return { records: this.records.slice(-max), total: this.records.length };
+  }
+  async append(rec: TrailRecord): Promise<void> {
+    this.records.push(rec);
   }
 }
 
 /** Canonical bytes for one record. Data keys are sorted so the encoding is order-stable. */
 export function canonical(r: Omit<TrailRecord, 'hash' | 'sig' | 'alg'>): string {
+  // Code-point order, not locale order, so every verifier sorts the same way.
   const data = JSON.stringify(
-    Object.fromEntries(Object.entries(r.data).sort(([a], [b]) => a.localeCompare(b))),
+    Object.fromEntries(Object.entries(r.data).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
   );
   return `pqtrail|v1|${r.seq}|${r.at}|${r.kind}|${data}|${r.prev}`;
 }
 
 export function hashOf(canon: string): string {
   return createHash('sha256').update(canon).digest('hex');
+}
+
+/** Short identifier of a public key, for a person to compare across two sources. */
+export function fingerprintOf(publicKeyB64: string): string {
+  return `sha256:${createHash('sha256').update(Buffer.from(publicKeyB64, 'base64')).digest('hex').slice(0, 32)}`;
 }
 
 export interface Verification {
@@ -107,40 +131,69 @@ export function verifyTrail(records: readonly TrailRecord[], publicKeyB64: strin
 export class Trail {
   private constructor(
     private readonly store: TrailStore,
-    private readonly seed: string,
     private readonly keys: { publicKey: Uint8Array; secretKey: Uint8Array },
     private records: TrailRecord[],
+    private count: number,
     private readonly now: () => Date,
   ) {}
 
-  /** Load the seed and records from the store, or create a fresh seed and persist it. */
+  /** Appends run one at a time: each waits for the previous write before reading the head. */
+  private queue: Promise<unknown> = Promise.resolve();
+
+  /** Load the seed and the newest window from the store, or create a fresh seed and persist it. */
   static async open(store: TrailStore, now: () => Date = () => new Date()): Promise<Trail> {
-    const { seed, records } = await store.load();
-    const s = seed ?? randomBytes(32).toString('base64');
-    const keys = ml_dsa65.keygen(Buffer.from(s, 'base64'));
-    if (!seed) await store.save(s, records);
-    return new Trail(store, s, keys, records, now);
+    let seed = await store.loadSeed();
+    if (!seed) {
+      seed = randomBytes(32).toString('base64');
+      await store.saveSeed(seed);
+    }
+    const keys = ml_dsa65.keygen(Buffer.from(seed, 'base64'));
+    const tail = await store.loadTail(WINDOW);
+    return new Trail(store, keys, tail.records, tail.total, now);
   }
 
   get publicKey(): string {
     return Buffer.from(this.keys.publicKey).toString('base64');
   }
 
+  get fingerprint(): string {
+    return fingerprintOf(this.publicKey);
+  }
+
   get head(): string {
     return this.records.at(-1)?.hash ?? GENESIS_HASH;
   }
 
+  /** Records stored in total, including those outside the in-memory window. */
+  get total(): number {
+    return this.count;
+  }
+
+  /** The in-memory window, oldest first. */
   list(): TrailRecord[] {
     return [...this.records];
   }
 
+  private verified: { head: string; result: Verification } | undefined;
+
+  /** Verification of the in-memory window, computed once per chain head. */
   verify(): Verification {
-    return verifyTrail(this.records, this.publicKey);
+    if (this.verified?.head === this.head && this.verified.result.count === this.records.length)
+      return this.verified.result;
+    const result = verifyTrail(this.records, this.publicKey);
+    this.verified = { head: this.head, result };
+    return result;
   }
 
-  async append(kind: TrailKind, data: Record<string, string>): Promise<TrailRecord> {
+  append(kind: TrailKind, data: Record<string, string>): Promise<TrailRecord> {
+    const run = this.queue.then(() => this.appendNow(kind, data));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async appendNow(kind: TrailKind, data: Record<string, string>): Promise<TrailRecord> {
     const base = {
-      seq: this.records.length + 1,
+      seq: this.count + 1,
       at: this.now().toISOString(),
       kind,
       data,
@@ -154,8 +207,11 @@ export class Trail {
       sig: Buffer.from(sig).toString('base64'),
       alg: TRAIL_ALGORITHM,
     };
-    this.records = [...this.records, rec];
-    await this.store.save(this.seed, this.records);
+    // Persist first. The in-memory window changes only when the write succeeded, so a failed
+    // write leaves the head and the count untouched for the next append.
+    await this.store.append(rec);
+    this.records = [...this.records, rec].slice(-WINDOW);
+    this.count += 1;
     return rec;
   }
 }

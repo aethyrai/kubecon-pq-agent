@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { recordPolicyChanges } from '../policy-watch.js';
+import { recordPolicyChanges, snapshotFromRecords } from '../policy-watch.js';
 import { canonical, GENESIS_HASH, hashOf, MemoryTrailStore, Trail, verifyTrail } from '../trail.js';
 
 /** Index into a list and fail the test instead of returning undefined. */
@@ -12,7 +12,10 @@ function at<T>(list: readonly T[], i: number): T {
 
 const clock = (start = '2026-11-09T19:00:00Z') => {
   let t = new Date(start).getTime();
-  return () => new Date((t += 1000));
+  return () => {
+    t += 1000;
+    return new Date(t);
+  };
 };
 
 test('a fresh trail has a stable public key and an empty, valid chain', async () => {
@@ -103,6 +106,22 @@ test('a reopened trail continues the same chain with the same key', async () => 
   assert.deepEqual(again.verify(), { ok: true, count: 2 });
 });
 
+test('the policy snapshot is rebuilt from the trail, so a restart sees the last recorded state', async () => {
+  const trail = await Trail.open(new MemoryTrailStore(), clock());
+  const p768 = { name: 'default', kem: 'ML-KEM-768', signature: 'ML-DSA-65' } as const;
+  const p1024 = { name: 'default', kem: 'ML-KEM-1024', signature: 'ML-DSA-87' } as const;
+  await recordPolicyChanges(trail, new Map(), [p768]);
+  const restarted = snapshotFromRecords(trail.list());
+  assert.deepEqual(restarted.get('default'), p768);
+  // Still at 768 after the restart: nothing new is recorded.
+  await recordPolicyChanges(trail, restarted, [p768]);
+  assert.equal(trail.total, 1);
+  // Rotated while the service was down: the restart records the rotation, not a fresh sight.
+  await recordPolicyChanges(trail, restarted, [p1024]);
+  assert.equal(trail.list().at(-1)?.kind, 'policy.rotated');
+  assert.deepEqual(snapshotFromRecords(trail.list()).get('default'), p1024);
+});
+
 test('policy watch records first sight and rotations, not unchanged polls', async () => {
   const trail = await Trail.open(new MemoryTrailStore(), clock());
   const p768 = { name: 'default', kem: 'ML-KEM-768', signature: 'ML-DSA-65' } as const;
@@ -121,4 +140,42 @@ test('policy watch records first sight and rotations, not unchanged polls', asyn
     toSignature: 'ML-DSA-87',
   });
   assert.equal(snap.get('default')?.kem, 'ML-KEM-1024');
+});
+
+test('concurrent appends serialize into one unbroken chain', async () => {
+  const trail = await Trail.open(new MemoryTrailStore(), clock());
+  const results = await Promise.all(
+    Array.from({ length: 20 }, (_, i) => trail.append('token.verified', { peer: `peer-${i}` })),
+  );
+  assert.deepEqual(
+    results.map((r) => r.seq),
+    Array.from({ length: 20 }, (_, i) => i + 1),
+  );
+  assert.equal(new Set(results.map((r) => r.hash)).size, 20);
+  assert.deepEqual(trail.verify(), { ok: true, count: 20 });
+});
+
+test('a failed Secret write does not block later appends', async () => {
+  let fail = true;
+  const inner = new MemoryTrailStore();
+  const flaky = {
+    loadSeed: () => inner.loadSeed(),
+    saveSeed: (s: string) => inner.saveSeed(s),
+    loadTail: (m: number) => inner.loadTail(m),
+    append: async (rec: Parameters<typeof inner.append>[0]) => {
+      if (fail) {
+        fail = false;
+        throw new Error('kube api down');
+      }
+      await inner.append(rec);
+    },
+  };
+  const trail = await Trail.open(flaky, clock());
+  await assert.rejects(trail.append('token.verified', { peer: 'a' }), /kube api down/);
+  // The failed record was rolled back: the next one takes its place in the chain.
+  const r = await trail.append('token.verified', { peer: 'b' });
+  assert.equal(r.seq, 1);
+  assert.equal(r.prev, GENESIS_HASH);
+  assert.equal(trail.total, 1);
+  assert.deepEqual(trail.verify(), { ok: true, count: 1 });
 });

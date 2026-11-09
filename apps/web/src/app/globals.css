@@ -713,3 +713,7 @@ ol.trail li {
 ol.trail li.rotated {
   border-left-color: var(--accent);
 }
+ol.trail h2 {
+  font-size: 1.0625rem;
+  margin: 0;
+}

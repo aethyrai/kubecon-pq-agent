@@ -168,6 +168,7 @@ export interface TrailResponse {
   algorithm: string;
   publicKey: string;
   head: string;
+  fingerprint?: string;
   total?: number;
   from?: number;
   verification: { ok: boolean; count: number; brokenAt?: number; reason?: string };
