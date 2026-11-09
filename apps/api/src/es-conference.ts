@@ -46,6 +46,7 @@ export function esConference(client: Client, embedder: Embedder): Conference {
         textFields: SESSION_FIELDS,
         filters: { ...filters, day },
         size: 500,
+        sort: [{ start: 'asc' }],
       });
       return hits.map((h) => h.source).sort((a, b) => a.start.localeCompare(b.start));
     },

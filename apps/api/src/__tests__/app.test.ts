@@ -55,7 +55,7 @@ test('GET /schedule/:day validates the day and sorts by start', async () => {
 });
 
 test('GET /plan/conflicts finds the overlapping pair and reports missing ids', async () => {
-  const res = await app.request('/plan/conflicts?ids=s1,s2,s3,nope');
+  const res = await app.request('/plan/conflicts?ids=s1,s2,s2,s3,nope');
   const b = await json(res);
   assert.deepEqual(b.conflicts, [{ a: 's1', b: 's2', overlapMinutes: 15 }]);
   assert.deepEqual(b.missing, ['nope']);
@@ -69,6 +69,22 @@ test('overlaps and conflicts are pure and symmetric', () => {
   assert.equal(overlaps(s2, s1), true);
   assert.equal(overlaps(s1, s3), false);
   assert.equal(conflicts([s1, s3]).length, 0);
+});
+
+test('POST /recommend accepts a JSON boolean captioned filter', async () => {
+  const res = await app.request('/recommend', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ interests: 'agent security', filters: { captioned: true } }),
+  });
+  const b = await json(res);
+  assert.deepEqual(b.filters, { captioned: true });
+  assert.deepEqual(b.session_ids, ['s2']);
+});
+
+test('GET /booths with no query lists exhibitors', async () => {
+  const b = await json(await app.request('/booths'));
+  assert.equal((b.exhibitors as unknown[]).length, 1);
 });
 
 test('booths, side events, and room access', async () => {

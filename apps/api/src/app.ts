@@ -11,15 +11,22 @@ export interface Readiness {
 
 const DAYS = new Set(['2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12']);
 
-function filtersFrom(q: Record<string, string | undefined>): SessionFilters {
+function filtersFrom(q: Record<string, string | boolean | undefined>): SessionFilters {
   const f: SessionFilters = {};
-  if (q.day) f.day = q.day;
-  if (q.track) f.track = q.track;
-  if (q.level) f.level = q.level;
-  if (q.venue) f.venue = q.venue;
-  if (q.event) f.colocated_event = q.event;
-  if (q.captioned === 'true') f.captioned = true;
-  if (q.captioned === 'false') f.captioned = false;
+  const str = (v: string | boolean | undefined): string | undefined =>
+    typeof v === 'string' && v.length > 0 ? v : undefined;
+  const day = str(q.day);
+  const track = str(q.track);
+  const level = str(q.level);
+  const venue = str(q.venue);
+  const event = str(q.event);
+  if (day) f.day = day;
+  if (track) f.track = track;
+  if (level) f.level = level;
+  if (venue) f.venue = venue;
+  if (event) f.colocated_event = event;
+  if (q.captioned === 'true' || q.captioned === true) f.captioned = true;
+  if (q.captioned === 'false' || q.captioned === false) f.captioned = false;
   return f;
 }
 function sizeFrom(v: string | undefined, dflt: number, max: number): number {
@@ -91,10 +98,14 @@ export function buildApp(
 
   /** Given session ids, the overlapping pairs. */
   app.get('/plan/conflicts', async (c) => {
-    const ids = (c.req.query('ids') ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const ids = [
+      ...new Set(
+        (c.req.query('ids') ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
+    ];
     if (ids.length < 2)
       return c.json({ error: 'ids: at least two comma-separated session ids' }, 400);
     const sessions = await conf.sessionsById(ids);

@@ -23,6 +23,8 @@ export interface HybridQuery {
   size: number;
   /** Candidate depth per leg before fusion. */
   depth?: number | undefined;
+  /** Sort for the no-text, no-vector listing. */
+  sort?: estypes.Sort | undefined;
 }
 
 export interface Hit<T> {
@@ -127,12 +129,12 @@ export async function hybridSearch<T extends object>(
   }
 
   if (legs.length === 0) {
-    // No text and no vector: a filtered listing in time order.
+    // No text and no vector: a filtered listing. Sort defaults to _doc so indexes without `start` still list.
     const res = await client.search<T>({
       index: q.index,
       size: q.size,
       query: { bool: { filter } },
-      sort: [{ start: 'asc' }] as never,
+      sort: q.sort ?? ['_doc'],
     });
     return res.hits.hits
       .filter((h) => h._id && h._source)
