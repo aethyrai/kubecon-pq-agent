@@ -65,8 +65,8 @@ kubectl -n conf port-forward svc/web 3000:80   # then open http://localhost:3000
 Through the tunnel from a laptop (needs `aethyr-tunnel` on the path and cluster access):
 
 ```bash
-demo/tunnel-client.sh            # opens 127.0.0.1:8080 -> api and 127.0.0.1:8081 -> mcp-server
-curl http://127.0.0.1:8080/search?q=agents+that+fix+clusters
+demo/tunnel-client.sh            # opens 127.0.0.1:8085 -> api and 127.0.0.1:8081 -> mcp-server
+curl http://127.0.0.1:8085/search?q=agents+that+fix+clusters
 ```
 
 Register the MCP server in a client: Streamable HTTP at `http://127.0.0.1:8081/mcp`.

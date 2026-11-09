@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Laptop side of the Aethyr tunnel (SOP 5.4 steps 5-6, 6.1 step 3).
 # Fetches the client cert, learns the gateway DID, registers this laptop as a PQPeer, and opens
-#   127.0.0.1:8080 -> api  (gateway :7443)
+#   127.0.0.1:8085 -> api  (gateway :7443)
 #   127.0.0.1:8081 -> mcp  (gateway :7444)
+#   127.0.0.1:8082 -> identity (gateway :7445)
 # Usage: demo/tunnel-client.sh [gateway-ip]      Stop with Ctrl-C.
 set -euo pipefail
 GW="${1:-34.22.42.147}"
@@ -25,7 +26,7 @@ export AWP_NODE_SEED; AWP_NODE_SEED=$(cat "$DIR/seed")
 
 # 3. Gateway DID from its startup log (first tunnel container)
 POD=$(kubectl -n $NS get pods -l app=aethyr-node -o jsonpath='{.items[0].metadata.name}')
-GW_DID=$(kubectl -n $NS logs "$POD" -c tunnel-api | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'did_presented=[^ ]+' | head -1 | cut -d= -f2)
+GW_DID=$(kubectl -n $NS logs "$POD" -c tunnel-api --tail=-1 | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'did_presented=[^ ]+' | head -1 | cut -d= -f2)
 [ -n "$GW_DID" ] || { echo "gateway DID not found in logs of $POD"; exit 1; }
 printf '# gateway\n%s\n' "$GW_DID" > "$DIR/peers.txt"
 
@@ -36,7 +37,7 @@ mkcfg() { # name peerPort localPort
  "handshake_version":2,"fips_transport":false}
 JSON
 }
-mkcfg api 7443 8080; mkcfg mcp 7444 8081
+mkcfg api 7443 8085; mkcfg mcp 7444 8081; mkcfg identity 7445 8082
 
 # 4. Learn this laptop's DID (one dry start) and register it as a PQPeer the operator admits
 MY_DID=$(timeout 2 "$BIN" "$DIR/tunnel-api.json" 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'did_presented=[^ ]+' | head -1 | cut -d= -f2 || true)
@@ -60,7 +61,9 @@ sleep 5
 # 5. Open both tunnels
 "$BIN" "$DIR/tunnel-api.json" & A=$!
 "$BIN" "$DIR/tunnel-mcp.json" & B=$!
-trap 'kill $A $B 2>/dev/null' EXIT
-sleep 1; echo "tunnels up: api http://127.0.0.1:8080  mcp http://127.0.0.1:8081/mcp"
-curl -s -m 10 -o /dev/null -w 'api /healthz through tunnel: HTTP %{http_code}\n' http://127.0.0.1:8080/healthz || true
+"$BIN" "$DIR/tunnel-identity.json" & C=$!
+trap 'kill $A $B $C 2>/dev/null' EXIT
+sleep 1; echo "tunnels up: api http://127.0.0.1:8085  mcp http://127.0.0.1:8081/mcp  identity http://127.0.0.1:8082"
+curl -s -m 10 -o /dev/null -w 'identity /healthz through tunnel: HTTP %{http_code}\n' http://127.0.0.1:8082/healthz || true
+curl -s -m 10 -o /dev/null -w 'api /healthz through tunnel: HTTP %{http_code}\n' http://127.0.0.1:8085/healthz || true
 wait
