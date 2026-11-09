@@ -1,0 +1,74 @@
+{{- /*
+Dash0 deployment markers. Argo CD runs the PostSync Job after a successful sync and the SyncFail
+Job after a failed one. Each posts one OTLP log record with event name dash0.deployment to the
+in-cluster collector, which forwards it to Dash0. Dash0 draws a marker on every chart of the
+service whose resource service.name matches. Same file in api, mcp-server, and web.
+*/ -}}
+{{- range $status, $hook := dict "succeeded" "PostSync" "failed" "SyncFail" }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $.Chart.Name }}-deploy-event-{{ $status }}
+  namespace: {{ $.Release.Namespace }}
+  labels: { app: {{ $.Chart.Name }}-deploy-event }
+  annotations:
+    argocd.argoproj.io/hook: {{ $hook }}
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app: {{ $.Chart.Name }}-deploy-event }
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: post
+          image: {{ $.Values.deployEvent.image | quote }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVICE, value: {{ $.Chart.Name | quote }} }
+            - { name: VERSION, value: {{ $.Values.image.tag | quote }} }
+            - { name: STATUS, value: {{ $status | quote }} }
+            - { name: ENDPOINT, value: {{ $.Values.deployEvent.endpoint | quote }} }
+          command: ["sh", "-ec"]
+          args:
+            - |
+              now="$(date +%s)000000000"
+              body='{"resourceLogs":[{"resource":{"attributes":[
+                {"key":"service.name","value":{"stringValue":"'"$SERVICE"'"}},
+                {"key":"service.version","value":{"stringValue":"'"$VERSION"'"}},
+                {"key":"deployment.environment.name","value":{"stringValue":"hackathon"}}]},
+                "scopeLogs":[{"scope":{"name":"argocd-hook"},"logRecords":[{
+                "timeUnixNano":"'"$now"'","severityNumber":9,"severityText":"INFO",
+                "eventName":"dash0.deployment",
+                "body":{"stringValue":"'"$SERVICE $VERSION deployment $STATUS"'"},
+                "attributes":[
+                  {"key":"event.name","value":{"stringValue":"dash0.deployment"}},
+                  {"key":"deployment.status","value":{"stringValue":"'"$STATUS"'"}},
+                  {"key":"deployment.name","value":{"stringValue":"'"$SERVICE"'"}},
+                  {"key":"deployment.id","value":{"stringValue":"'"$SERVICE-$VERSION"'"}}]}]}]}]}'
+              code="$(printf '%s' "$body" | curl -sS -o /tmp/resp -w '%{http_code}' -X POST \
+                -H 'content-type: application/json' --data-binary @- "$ENDPOINT/v1/logs")"
+              echo "dash0.deployment $SERVICE $VERSION $STATUS -> HTTP $code $(cat /tmp/resp)"
+              [ "$code" = 200 ] || echo "WARN marker not accepted (HTTP $code); deploy unaffected"
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
