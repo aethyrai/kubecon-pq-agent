@@ -90,6 +90,10 @@ export default async function Page({ searchParams }: PageProps<'/about'>) {
           Every log line carries its trace id. Open a search in Dash0 logs and its full trace opens
           with it, from the web client through the api to Elasticsearch.
         </p>
+        <p>
+          Inside each search trace, the search.leg.bm25 and search.leg.knn spans show which
+          retrieval leg found each hit, and search.hybrid records how many results came from both.
+        </p>
       </section>
       <section aria-labelledby="where">
         <h2 id="where">Where to look</h2>
