@@ -9,7 +9,8 @@ echo "| --- | --- | --- | --- |"
 gh pr list --repo aethyrai/kubecon-pq-agent --state merged --limit 100 --json number,title,mergedAt,url \
   --jq 'sort_by(.mergedAt) | .[] | [.number, .mergedAt, .title, .url] | @tsv' \
 | while IFS=$'\t' read -r n at title url; do
-    local_t=$(TZ=America/Denver date -d "$at" +%H:%M)
-    g=$(gh pr checks "$n" --repo aethyrai/kubecon-pq-agent 2>/dev/null | awk -F'\t' '$1=="Gitar"{print $2}' | head -1)
-    echo "| [#$n]($url) | $local_t | $title | ${g:-n/a} |"
+    t=$(TZ=America/Denver date -d "$at" +%H:%M)
+    # gh pr checks exits non-zero when a check failed or is pending; that must not end the loop.
+    g=$( (gh pr checks "$n" --repo aethyrai/kubecon-pq-agent 2>/dev/null </dev/null || true) | awk -F'\t' '$1=="Gitar"{print $2}' | head -1)
+    echo "| [#$n]($url) | $t | $title | ${g:-n/a} |"
   done

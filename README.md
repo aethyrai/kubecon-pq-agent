@@ -18,6 +18,8 @@ Everything else in this repository was written on November 9, 2026.
 
 ## What was built on November 9
 
+Every change is a pull request reviewed by Gitar; `demo/evidence/CHANGES.md` is the generated log with merge times.
+
 Platform and prep (morning, pull requests 1 to 15):
 
 - #1 Platform under Argo CD: namespaces with Pod Security labels, default-deny NetworkPolicies, Let's Encrypt issuer, app-of-apps.
@@ -25,17 +27,25 @@ Platform and prep (morning, pull requests 1 to 15):
 - #3 `es-client`: six strict index mappings behind date-suffixed aliases, alias swap, tests.
 - #4 CRDs `CryptoPolicy`, `PQTunnel`, `PQPeer` with OpenAPI enums and CEL rules.
 - #6, #7 OpenTelemetry collector and node agent exporting to Dash0; Radar under Argo.
-- #8 Ingest from the LF schedule JSON with local bge-small embeddings (384 dims).
+- #8 Ingest from the LF schedule JSON with local bge-small embeddings (384 dims, no model API).
 - #10 Service skeletons, Rollout charts with canaries, operator, gateway DaemonSet with bootstrap Job, chaos faults, gateway telemetry, web skeleton.
 - #11 Identity service, the sample `CryptoPolicy` and `PQTunnel`s.
 - #12, #13, #14 Pull secrets, nested dependency fix, bootstrap Job fix.
 - #15 Exhibitors (229 booths) and side events from the sponsor directory and co-located schedules.
 
-Product (afternoon, pull requests 16 to 18):
+Product (pull requests 16 to 35):
 
-- #16 `api`: hybrid search, recommend, schedule, conflicts, booths, side events, room access.
+- #16 `api`: hybrid search (BM25 + kNN, reciprocal rank fusion), recommend, schedule, conflicts, booths, side events, room access.
 - #17 `mcp-server`: `search_sessions`, `get_schedule`, `recommend`, `check_conflicts`, `find_booths`, `side_events`, `room_accessibility`; resource `kubecon://schedule/{day}`; prompt `plan-my-day`.
 - #18 `web`: schedule with a conflict-aware plan, booths, side events, room accessibility panel, three modes.
+- #19 README and the six-minute script.
+- #20, #26, #35 Deploys: immutable image tags, operator, web.
+- #21 Gateway image with the `signature` field (aethyr-node PR #88): CryptoPolicy drives ML-DSA-65/ML-KEM-768 or ML-DSA-87/ML-KEM-1024.
+- #22, #30, #33 Evidence tooling (`capture.sh`, `changes.sh`, `smoke.sh`) and captured proofs: tunnel handshake, public search, canary, 8/8 smoke, MCP recommend and conflicts, the live rotation to ML-KEM-1024 and back.
+- #23, #25, #29 Fixes found by running it: ingest fixtures in the image, Dash0 token newline, gateway probe noise.
+- #24 Operator as a polling reconciler that records a Kubernetes Event per change action.
+- #28/#31 Argo never re-applies the CryptoPolicy spec, so a merge during the demo cannot undo the rotation.
+- #32 Web design pass: two-venue day ruler, hyperlegible type, token palette with dark mode, nav that keeps mode and picks.
 
 ## Tracks
 
