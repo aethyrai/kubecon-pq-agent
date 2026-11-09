@@ -1,0 +1,87 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: cryptopolicies.aethyr.io
+spec:
+  group: aethyr.io
+  scope: Cluster
+  names:
+    kind: CryptoPolicy
+    listKind: CryptoPolicyList
+    plural: cryptopolicies
+    singular: cryptopolicy
+    shortNames: [cpol]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources: { status: {} }
+      additionalPrinterColumns:
+        - { name: KEM, type: string, jsonPath: .spec.kem }
+        - { name: Signature, type: string, jsonPath: .spec.signature }
+        - { name: Hybrid, type: string, jsonPath: .spec.hybrid }
+        - { name: Profile, type: string, jsonPath: .spec.profile }
+        - { name: Sessions, type: integer, jsonPath: .status.activeSessions.total }
+        - { name: Ready, type: string, jsonPath: '.status.conditions[?(@.type=="Ready")].status' }
+        - { name: Age, type: date, jsonPath: .metadata.creationTimestamp }
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [kem, signature]
+              properties:
+                kem:
+                  type: string
+                  description: Key encapsulation mechanism for the tunnel handshake.
+                  enum: [ML-KEM-768, ML-KEM-1024]
+                hybrid:
+                  type: string
+                  description: Classical component mixed into the KEM, or none.
+                  enum: [X25519, none]
+                  default: X25519
+                signature:
+                  type: string
+                  description: Peer authentication signature level.
+                  enum: [ML-DSA-65, ML-DSA-87]
+                rekeyInterval:
+                  type: string
+                  description: Rekey interval for active sessions, as a Go duration (for example 15m).
+                  pattern: '^([0-9]+(s|m|h))+$'
+                  default: 15m
+                profile:
+                  type: string
+                  description: hackathon allows any combination; cnsa2 pins ML-KEM-1024 and ML-DSA-87.
+                  enum: [hackathon, cnsa2]
+                  default: hackathon
+              x-kubernetes-validations:
+                - rule: "self.profile != 'cnsa2' || (self.kem == 'ML-KEM-1024' && self.signature == 'ML-DSA-87')"
+                  message: "profile cnsa2 requires kem ML-KEM-1024 and signature ML-DSA-87"
+                - rule: "self.kem != 'ML-KEM-1024' || self.signature == 'ML-DSA-87'"
+                  message: "ML-KEM-1024 is negotiated at signature level ML-DSA-87; set signature ML-DSA-87"
+                - rule: "self.kem != 'ML-KEM-768' || self.signature == 'ML-DSA-65'"
+                  message: "ML-KEM-768 is negotiated at signature level ML-DSA-65; set signature ML-DSA-65"
+            status:
+              type: object
+              properties:
+                appliedGeneration: { type: integer, format: int64 }
+                activeSessions:
+                  type: object
+                  properties:
+                    total: { type: integer }
+                    byAlgorithm:
+                      type: object
+                      additionalProperties: { type: integer }
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      type: { type: string }
+                      status: { type: string, enum: ["True", "False", Unknown] }
+                      reason: { type: string }
+                      message: { type: string }
+                      lastTransitionTime: { type: string, format: date-time }
