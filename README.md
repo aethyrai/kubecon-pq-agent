@@ -57,18 +57,32 @@ Product (pull requests 16 to 35):
 - #28/#31 Argo never re-applies the CryptoPolicy spec, so a merge during the demo cannot undo the rotation.
 - #32 Web design pass: two-venue day ruler, hyperlegible type, token palette with dark mode, nav that keeps mode and picks.
 
+Afternoon (pull requests 36 to 73):
+
+- #44, #46, #47 Signed post-quantum trail: ML-DSA-65 hash-chained records kept by identity in segmented Secrets, `/trail` and `/trail/key`, the web `/trail` page, and the offline verifier `demo/verify-trail.mjs`.
+- #45 Identity rolls with Recreate so the trail has one writer.
+- #53, #54 OpenTelemetry through every hop: one shared `@kubecon-pq-agent/otel` bootstrap for every Node service, named spans `search.hybrid` (with `search.leg.bm25` and `search.leg.knn`), `embed.local`, `mcp.tool <name>`, `operator.reconcile`, `ingest.bulk`, server tracing in web, flush on exit.
+- #57, #58 Incident and recovery: npm nested the OpenTelemetry SDK under `packages/otel/node_modules` and the images did not copy it, so every new pod crash-looped while the old canary pods kept serving; the Dockerfiles copy the directory and the cluster recovered in twenty minutes.
+- #60, #63 Dash0 deployment markers: Argo CD PostSync and SyncFail hooks post a `dash0.deployment` event per roll, tolerant of the pod-network race.
+- #61 `trace_id` and `span_id` on every request log line, so a log line in Dash0 opens its trace.
+- #68, #72 Chaos faults made real: the sealed token lost its trailing newline, and the latency fault reaches every api replica.
+- #36, #48, #49, #50, #59, #64, #73 Evidence captures and README passes; text-only sponsor credits.
+- #51, #52, #65, #67, #69 Web: credits, the `/about` section "What you see in Dash0", hybrid wording.
+- #66 Run of show; #71 README claims checked against the repository history.
+- #55 stays open on purpose: the planted CI break that Gitar diagnosed and fixed with its own commit.
+
 ## Tracks
 
 Evidence files live in `demo/evidence/`. One file per judging line:
 
 | Track | What the judge sees | Evidence |
 | --- | --- | --- |
-| Gitar: Never Merge Broken | Features land through reviewed PRs. [PR 55](https://github.com/aethyrai/kubecon-pq-agent/pull/55) has a deliberately planted type error: CI failed, Gitar diagnosed the error and committed the fix, and CI passed | `gitar-diagnosis.png`, `gitar-autofix-commit.png`, the PR list |
-| Dash0: Stop Flying Blind | One trace from the tunnel through api, Elasticsearch, and the model; Agent0 names the slow Elasticsearch span after a planted fault | `dash0-e2e-trace.png`, `agent0-es-latency.png`, `dash0-slo-recovery.png`, `dash0-kem-flip.png` |
+| Gitar: Never Merge Broken | Features land through reviewed PRs. [PR 55](https://github.com/aethyrai/kubecon-pq-agent/pull/55) has a deliberately planted type error: CI failed, Gitar diagnosed the error and committed the fix, and CI passed | `gitar-ci-fix.txt`, `gitar-diagnosis.png`, `gitar-autofix-commit.png`, `CHANGES.md` |
+| Dash0: Stop Flying Blind | One trace from the tunnel through web and api to Elasticsearch, with the `search.leg.bm25` and `search.leg.knn` spans inside `search.hybrid`; every request log line carries its trace id; a deployment marker per roll; Agent0 names the slow Elasticsearch span after a planted fault | `otel-collector-span-export.txt`, `log-trace-correlation.txt`, `dash0-deployment-markers.txt`, `chaos-es-latency-fault.txt`, `dash0-e2e-trace.png`, `agent0-es-latency.png`, `dash0-kem-flip.png` |
 | Radar: AI SRE | Radar explains a pod that we deliberately killed, promotes a canary from the coding agent, audits the cluster before and after | `radar-pod-kill-rca.png`, `cline-radar-promote.png`, `radar-audit-before.png`, `radar-audit-after-monday.png` |
-| Elasticsearch: Find the Right Talk | Hybrid search finds what keyword search misses; Elasticsearch is the only datastore | `es-hybrid-vs-keyword.png`, `kubectl get pods -n elastic` |
+| Elasticsearch: Find the Right Talk | Hybrid search finds what keyword search misses; Elasticsearch is the only datastore | `smoke-through-tunnel.txt` (semantic-only hits counted), `es-hybrid-vs-keyword.png`, `kubectl get pods -n elastic` |
 | Merge Forward | Screen-reader mode reading a room panel; every control labelled | `web-screenreader-room.png` |
-| Best overall | Live `CryptoPolicy` rotation from ML-KEM-768 to ML-KEM-1024 with the Dash0 label flipping | `kubectl-aethyr-crds.png`, `dash0-kem-1024.png`, `tunnel-local-smoke.txt` |
+| Best overall | Live `CryptoPolicy` rotation from ML-KEM-768 to ML-KEM-1024 with the Dash0 label flipping | `cryptopolicy-rotation-ml-kem-1024.txt`, `cryptopolicy-rotation-back-to-768.txt`, `pq-trail-rotation.txt`, `kubectl-aethyr-crds.png`, `dash0-kem-1024.png` |
 
 ## Run it
 

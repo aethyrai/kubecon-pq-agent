@@ -32,9 +32,39 @@
 | [#32](https://github.com/aethyrai/kubecon-pq-agent/pull/32) | 11:01 | web: design pass with a two-venue day ruler, hyperlegible type, and styled modes | pass |
 | [#33](https://github.com/aethyrai/kubecon-pq-agent/pull/33) | 11:01 | Laptop client follows the live CryptoPolicy; rotation evidence | pass |
 | [#35](https://github.com/aethyrai/kubecon-pq-agent/pull/35) | 11:08 | Deploy web sha-4e8f5b7 (design pass, product pages) | pass |
-
-## Operating notes learned today
-
-- Switching a live Deployment to `strategy: Recreate` fails Argo's server-side apply with "rollingUpdate: Forbidden" while the old `rollingUpdate` block is still on the object. Remove it first: `kubectl patch deploy <name> --type json -p '[{"op":"remove","path":"/spec/strategy/rollingUpdate"}]'`, then hard-refresh the Application.
-- Argo automated sync re-applies manifests on every new revision of main. Anything a demo edits live (the CryptoPolicy spec) must be under `ignoreDifferences` with `RespectIgnoreDifferences=true`, or a merge mid-demo undoes it.
-- The presented tunnel DID depends on both the signature level and the transport, so a client that follows the CryptoPolicy registers one PQPeer per level it may present.
+| [#36](https://github.com/aethyrai/kubecon-pq-agent/pull/36) | 11:29 | README: the full list of what was built today; regenerate the change log | pass |
+| [#37](https://github.com/aethyrai/kubecon-pq-agent/pull/37) | 11:39 | web: ruler key sentence and numbered room facts in reader mode | pass |
+| [#38](https://github.com/aethyrai/kubecon-pq-agent/pull/38) | 11:45 | web: /about page with provenance, linked from the footer | pass |
+| [#40](https://github.com/aethyrai/kubecon-pq-agent/pull/40) | 11:49 | Deploy web sha-1578b2d (ruler key, reader-mode numbered facts, /about) | pass |
+| [#39](https://github.com/aethyrai/kubecon-pq-agent/pull/39) | 11:49 | web: choose the talk to drop per conflict pair (rebased #34) | pass |
+| [#41](https://github.com/aethyrai/kubecon-pq-agent/pull/41) | 11:54 | Deploy web sha-9be2c50 (per-pair drop fix) | pass |
+| [#7](https://github.com/aethyrai/kubecon-pq-agent/pull/7) | 12:00 | Lowercase the OTLP gRPC header keys for the Dash0 exporter | pass |
+| [#43](https://github.com/aethyrai/kubecon-pq-agent/pull/43) | 12:01 | Wiring for the signed PQ trail (issue #42) | pass |
+| [#45](https://github.com/aethyrai/kubecon-pq-agent/pull/45) | 12:10 | identity: Recreate strategy so only one writer ever appends to the signed trail | pass |
+| [#46](https://github.com/aethyrai/kubecon-pq-agent/pull/46) | 12:13 | identity RBAC: enumerate the 50 trail segment Secrets by name | pass |
+| [#44](https://github.com/aethyrai/kubecon-pq-agent/pull/44) | 12:14 | Signed post-quantum trail: ML-DSA-65 chained records in identity, /trail page, offline verifier | pass |
+| [#47](https://github.com/aethyrai/kubecon-pq-agent/pull/47) | 12:20 | Deploy identity sha-1a2d73b and web sha-1a2d73b (signed PQ trail) | pass |
+| [#48](https://github.com/aethyrai/kubecon-pq-agent/pull/48) | 12:30 | Evidence: the signed PQ trail records the rotation round trip | pass |
+| [#49](https://github.com/aethyrai/kubecon-pq-agent/pull/49) | 12:34 | Evidence pass: deployed image tags in captures, operating notes, segment comment | pass |
+| [#50](https://github.com/aethyrai/kubecon-pq-agent/pull/50) | 12:56 | README: credits line for the sponsor tools (text only) | pass |
+| [#51](https://github.com/aethyrai/kubecon-pq-agent/pull/51) | 13:00 | web: text-only credit line in the footer and on /about | pass |
+| [#52](https://github.com/aethyrai/kubecon-pq-agent/pull/52) | 13:06 | Deploy web sha-d1e060b (credits line) | pass |
+| [#53](https://github.com/aethyrai/kubecon-pq-agent/pull/53) | 13:50 | Spans through every hop: shared OTel package, named spans per stage, web server tracing | pass |
+| [#54](https://github.com/aethyrai/kubecon-pq-agent/pull/54) | 13:54 | Flush OTel spans on natural exit; version-tag ingest traces; credit OpenTelemetry | pass |
+| [#56](https://github.com/aethyrai/kubecon-pq-agent/pull/56) | 13:59 | Roll all six images to sha-8de26b4: OTel spans everywhere, exit flush | pass |
+| [#57](https://github.com/aethyrai/kubecon-pq-agent/pull/57) | 14:08 | Ship the otel package's nested node_modules in every runtime image | pass |
+| [#58](https://github.com/aethyrai/kubecon-pq-agent/pull/58) | 14:13 | Roll all six images to sha-f32be44: recover from the otel crash loop | pass |
+| [#59](https://github.com/aethyrai/kubecon-pq-agent/pull/59) | 14:21 | Evidence: collector span export and smoke run after the OTel roll | pass |
+| [#61](https://github.com/aethyrai/kubecon-pq-agent/pull/61) | 14:26 | Stamp trace_id and span_id on every pino log line | pass |
+| [#60](https://github.com/aethyrai/kubecon-pq-agent/pull/60) | 14:26 | Dash0 deployment markers from Argo CD sync hooks | pass |
+| [#62](https://github.com/aethyrai/kubecon-pq-agent/pull/62) | 14:33 | Roll all six images to sha-ff350ab: pino trace ids, first Dash0 deployment markers | pass |
+| [#63](https://github.com/aethyrai/kubecon-pq-agent/pull/63) | 14:44 | Deployment-marker hook survives a refused connection | pass |
+| [#64](https://github.com/aethyrai/kubecon-pq-agent/pull/64) | 14:44 | Evidence: first Dash0 deployment markers and trace ids on log lines | pass |
+| [#65](https://github.com/aethyrai/kubecon-pq-agent/pull/65) | 14:47 | web: about page explains Dash0 deployment markers and log-to-trace links; footer credits OpenTelemetry | pass |
+| [#67](https://github.com/aethyrai/kubecon-pq-agent/pull/67) | 14:50 | web: about page: accurate search.hybrid wording | pass |
+| [#68](https://github.com/aethyrai/kubecon-pq-agent/pull/68) | 14:52 | Re-seal the chaos token without its trailing newline | pass |
+| [#66](https://github.com/aethyrai/kubecon-pq-agent/pull/66) | 14:53 | Run of show: leg spans, log trace ids, and a deployment-marker beat | pass |
+| [#69](https://github.com/aethyrai/kubecon-pq-agent/pull/69) | 14:55 | Web to sha-1ffb105: /about Dash0 section and OpenTelemetry credit | pass |
+| [#71](https://github.com/aethyrai/kubecon-pq-agent/pull/71) | 15:00 | docs(readme): correct claims to match the repository history | pass |
+| [#72](https://github.com/aethyrai/kubecon-pq-agent/pull/72) | 15:02 | Latency fault reaches every api replica; evidence of the fixed chaos token | pass |
+| [#73](https://github.com/aethyrai/kubecon-pq-agent/pull/73) | 15:03 | Evidence: web roll through the retrying deployment-marker hook | pass |
