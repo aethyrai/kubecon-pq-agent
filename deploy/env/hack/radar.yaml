@@ -1,0 +1,15 @@
+cloud:
+  enabled: true
+  url: wss://api.radarhq.io/agent
+  insecureSkipVerify: false
+  clusterName: KEALStqigvM
+  existingSecret: radar-cloud-config
+auth:
+  mode: proxy
+rbac:
+  helm: true
+  secrets: true
+  podExec: true
+  portForward: true
+  metrics: true
+  selfUpgrade: true

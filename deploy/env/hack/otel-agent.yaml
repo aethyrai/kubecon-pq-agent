@@ -1,0 +1,58 @@
+mode: daemonset
+fullnameOverride: otel-agent
+image:
+  repository: otel/opentelemetry-collector-k8s
+presets:
+  kubeletMetrics: { enabled: true }
+  hostMetrics: { enabled: true }
+  logsCollection: { enabled: true, includeCollectorLogs: false }
+  kubernetesAttributes: { enabled: true }
+extraEnvs:
+  - name: DASH0_AUTH_TOKEN
+    valueFrom:
+      secretKeyRef: { name: dash0-auth, key: token }
+  - name: DASH0_ENDPOINT
+    valueFrom:
+      secretKeyRef: { name: dash0-auth, key: endpoint }
+  - name: DASH0_DATASET
+    value: default
+config:
+  receivers:
+    otlp: null
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  processors:
+    batch: { timeout: 5s }
+    memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
+    resource/cluster:
+      attributes:
+        - { key: k8s.cluster.name, value: kube-aethyr, action: upsert }
+        - { key: deployment.environment.name, value: hackathon, action: upsert }
+  exporters:
+    otlp/dash0:
+      endpoint: ${env:DASH0_ENDPOINT}
+      headers:
+        Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+        Dash0-Dataset: ${env:DASH0_DATASET}
+  service:
+    pipelines:
+      traces: null
+      metrics:
+        receivers: [kubeletstats, hostmetrics]
+        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        exporters: [otlp/dash0]
+      logs:
+        receivers: [filelog]
+        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        exporters: [otlp/dash0]
+ports:
+  otlp: { enabled: false }
+  otlp-http: { enabled: false }
+  jaeger-compact: { enabled: false }
+  jaeger-thrift: { enabled: false }
+  jaeger-grpc: { enabled: false }
+  zipkin: { enabled: false }
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { cpu: 300m, memory: 384Mi }
