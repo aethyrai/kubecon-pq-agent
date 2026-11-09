@@ -1,4 +1,5 @@
 import { env, type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
+import { withSpan } from '@kubecon-pq-agent/otel';
 
 // Model files: MODEL_CACHE_DIR (default ./.model-cache). MODEL_OFFLINE=1 forbids downloads (the images bake the model in).
 env.cacheDir = process.env.MODEL_CACHE_DIR ?? './.model-cache';
@@ -39,6 +40,15 @@ export class LocalEmbedder implements Embedder {
   }
 
   async embed(texts: string[]): Promise<number[][]> {
+    return withSpan(
+      'embeddings',
+      'embed.local',
+      { 'embed.model': this.model, 'embed.texts': texts.length, 'embed.dims': this.dims },
+      () => this.embedInner(texts),
+    );
+  }
+
+  private async embedInner(texts: string[]): Promise<number[][]> {
     const extractor = await this.load();
     const out: number[][] = [];
     for (let i = 0; i < texts.length; i += BATCH) {

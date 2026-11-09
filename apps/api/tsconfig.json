@@ -13,6 +13,9 @@
     },
     {
       "path": "../../packages/embeddings"
+    },
+    {
+      "path": "../../packages/otel"
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { annotate } from '@kubecon-pq-agent/otel';
 import { PQPeerSpec } from '@kubecon-pq-agent/schema';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -70,6 +71,7 @@ export function buildApp(
       return c.json({ error: 'invalid registration', issues: parsed.error.issues }, 400);
     const b = parsed.data;
     const peerId = peerIdFromPublicKey(b.publicKey);
+    annotate({ 'peer.id': peerId, 'peer.algorithm': b.algorithm });
     const issuedAt = now();
     const expiresAt = new Date(issuedAt.getTime() + TOKEN_TTL_MS);
     const spec = PQPeerSpec.parse({

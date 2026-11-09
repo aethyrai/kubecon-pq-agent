@@ -29,6 +29,8 @@ spec:
             - { name: FIXTURE_DIR, value: /app/fixtures/sched }
             - { name: LF_FIXTURE_DIR, value: /app/fixtures/lf }
             - { name: EMBEDDER, value: local }
+            - { name: OTEL_SERVICE_NAME, value: ingest }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: http://otel-collector.observability.svc:4317 }
             - { name: MODEL_OFFLINE, value: "1" }
             - { name: MODEL_CACHE_DIR, value: /app/.model-cache }
             - name: ELASTICSEARCH_URL

@@ -6,5 +6,10 @@
     "types": ["node"],
     "composite": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../packages/otel"
+    }
+  ]
 }

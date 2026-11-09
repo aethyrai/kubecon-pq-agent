@@ -1,3 +1,4 @@
+import { annotate, withSpan } from '@kubecon-pq-agent/otel';
 import { API_GROUP, API_VERSION, CryptoPolicy, PQPeer, PQTunnel } from '@kubecon-pq-agent/schema';
 import pino from 'pino';
 import {
@@ -62,6 +63,10 @@ function fingerprint(ps: CryptoPolicy[], ts: PQTunnel[], pe: PQPeer[]): string {
 }
 
 export async function reconcile(): Promise<void> {
+  return withSpan('aethyr-operator', 'operator.reconcile', {}, () => reconcileInner());
+}
+
+async function reconcileInner(): Promise<void> {
   const [ps, ts, pe] = await Promise.all([
     list('cryptopolicies', CryptoPolicy),
     list('pqtunnels', PQTunnel),
@@ -73,6 +78,11 @@ export async function reconcile(): Promise<void> {
   log.info({ policies: ps.length, tunnels: ts.length, peers: pe.length }, 'change detected');
 
   const cfg = renderGatewayConfig(ts, ps, pe);
+  annotate({
+    'gateway.config_hash': cfg.hash,
+    'gateway.changed': cfg.hash !== lastHash,
+    'policy.levels': ps.map((p) => `${p.spec.kem}/${p.spec.signature}`).join(','),
+  });
   if (cfg.hash !== lastHash) {
     await upsertConfigMap(kube, cfg.data, cfg.hash);
     const rolled = await rollGateway(kube, cfg.hash);

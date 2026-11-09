@@ -7,10 +7,11 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
-    "start": "node dist/server.js"
+    "start": "node --import @kubecon-pq-agent/otel/register dist/server.js"
   },
   "dependencies": {
     "@hono/node-server": "2.1.6",
+    "@kubecon-pq-agent/otel": "0.0.0",
     "@kubecon-pq-agent/schema": "0.0.0",
     "@kubernetes/client-node": "2.0.2",
     "@noble/post-quantum": "0.5.4",
