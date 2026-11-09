@@ -1,0 +1,9 @@
+# dash0-handshake-metric
+recorded: 2026-11-09T16:49:56-07:00  host: aethyr-core  commit: 254ae27
+
+```
+$ sh -c TOKEN=$(tr -d "\n" < ~/.secrets/dash0-api-token); curl -sS -G https://api.us-west-2.aws.dash0.com/api/prometheus/api/v1/query --data-urlencode "query=sum by (kem, sig, side) (increase({otel_metric_name=\"aethyr.tunnel.handshakes\", otel_metric_type=\"sum\"}[15m]))" -H "Authorization: Bearer $TOKEN" -H "Dash0-Dataset: default" | python3 -c "import json,sys; d=json.load(sys.stdin); r=d[\"data\"][\"result\"]; print(\"aethyr.tunnel.handshakes series in Dash0:\", len(r)); [print(\" \", x[\"metric\"], \"count\", x[\"value\"][1]) for x in r]"
+aethyr.tunnel.handshakes series in Dash0: 1
+  {'kem': 'ML-KEM-768', 'side': 'responder', 'sig': 'ML-DSA-65'} count 5
+exit: 0
+```
