@@ -1,0 +1,81 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: pqtunnels.aethyr.io
+spec:
+  group: aethyr.io
+  scope: Namespaced
+  names:
+    kind: PQTunnel
+    listKind: PQTunnelList
+    plural: pqtunnels
+    singular: pqtunnel
+    shortNames: [pqt]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources: { status: {} }
+      additionalPrinterColumns:
+        - { name: Policy, type: string, jsonPath: .spec.policyRef.name }
+        - { name: Port, type: integer, jsonPath: .spec.listener.port }
+        - { name: Endpoints, type: string, jsonPath: .status.endpoints }
+        - { name: Sessions, type: integer, jsonPath: .status.activeSessions }
+        - { name: Ready, type: string, jsonPath: '.status.conditions[?(@.type=="Ready")].status' }
+        - { name: Reason, type: string, jsonPath: '.status.conditions[?(@.type=="Ready")].reason', priority: 1 }
+        - { name: Age, type: date, jsonPath: .metadata.creationTimestamp }
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [listener, policyRef, upstreams]
+              properties:
+                listener:
+                  type: object
+                  required: [port]
+                  properties:
+                    port: { type: integer, minimum: 1, maximum: 65535, default: 7443 }
+                    protocol: { type: string, enum: [TCP], default: TCP }
+                policyRef:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string, minLength: 1 }
+                upstreams:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [service, port]
+                    properties:
+                      service: { type: string, minLength: 1, description: "ClusterIP Service name, optionally namespace/name" }
+                      port: { type: integer, minimum: 1, maximum: 65535 }
+                      localPort:
+                        type: integer
+                        minimum: 1
+                        maximum: 65535
+                        description: Port the client reaches this upstream on at 127.0.0.1 through the tunnel.
+                nodeSelector:
+                  type: object
+                  additionalProperties: { type: string }
+            status:
+              type: object
+              properties:
+                endpoints:
+                  type: array
+                  items: { type: string }
+                activeSessions: { type: integer }
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      type: { type: string }
+                      status: { type: string, enum: ["True", "False", Unknown] }
+                      reason: { type: string }
+                      message: { type: string }
+                      lastTransitionTime: { type: string, format: date-time }

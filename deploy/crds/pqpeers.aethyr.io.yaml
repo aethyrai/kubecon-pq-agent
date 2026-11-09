@@ -1,0 +1,70 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: pqpeers.aethyr.io
+spec:
+  group: aethyr.io
+  scope: Namespaced
+  names:
+    kind: PQPeer
+    listKind: PQPeerList
+    plural: pqpeers
+    singular: pqpeer
+    shortNames: [pqp]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources: { status: {} }
+      additionalPrinterColumns:
+        - { name: Algorithm, type: string, jsonPath: .spec.algorithm }
+        - { name: Admitted, type: boolean, jsonPath: .status.admitted }
+        - { name: LastSeen, type: date, jsonPath: .status.lastSeen }
+        - { name: Expires, type: string, jsonPath: .spec.expiresAt, priority: 1 }
+        - { name: Age, type: date, jsonPath: .metadata.creationTimestamp }
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [publicKey, algorithm]
+              properties:
+                publicKey:
+                  type: string
+                  description: Base64 ML-DSA public key of the peer.
+                  minLength: 44
+                algorithm:
+                  type: string
+                  enum: [ML-DSA-65, ML-DSA-87]
+                did:
+                  type: string
+                  description: DID derived from the public key; filled by the operator when absent.
+                  pattern: '^did:(aethyr|key):'
+                displayName:
+                  type: string
+                  maxLength: 80
+                optIns:
+                  type: object
+                  properties:
+                    matchmaking: { type: boolean, default: false }
+                    directory: { type: boolean, default: false }
+                expiresAt: { type: string, format: date-time }
+            status:
+              type: object
+              properties:
+                admitted: { type: boolean }
+                lastSeen: { type: string, format: date-time }
+                tokenIssuedAt: { type: string, format: date-time }
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      type: { type: string }
+                      status: { type: string, enum: ["True", "False", Unknown] }
+                      reason: { type: string }
+                      message: { type: string }
+                      lastTransitionTime: { type: string, format: date-time }
