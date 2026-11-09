@@ -1,0 +1,29 @@
+# kill-api-pod-1600
+recorded: 2026-11-09T16:04:48-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504298
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ bash -c bash demo/chaos/kill-api-pod.sh; sleep 20; echo; kubectl -n conf get pods -l app=api -o custom-columns="NAME:.metadata.name,PHASE:.status.phase,READY:.status.containerStatuses[0].ready,START:.status.startTime"; echo; kubectl -n conf get events --field-selector involvedObject.kind=Pod --sort-by=.lastTimestamp | grep -E "api-" | tail -5; echo; curl -s -o /dev/null -w "public search during replacement: HTTP %{http_code}\n" -m 15 "https://app.kube.aethyr.cloud/?q=argo"
+deleting api-55f8988cff-brnpl as chaos-pod-killer
+pod "api-55f8988cff-brnpl" deleted from conf namespace
+NAME                   READY   STATUS        RESTARTS   AGE
+api-55f8988cff-brnpl   1/1     Terminating   0          7m24s
+api-55f8988cff-jgxpk   1/1     Running       0          8m56s
+
+NAME                   PHASE     READY   START
+api-55f8988cff-jgxpk   Running   true    2026-11-09T22:55:54Z
+api-55f8988cff-q9sg7   Running   true    2026-11-09T23:04:50Z
+
+7m34s       Normal    Started     pod/api-deploy-event-succeeded-v4vn2          Container started
+20s         Normal    Killing     pod/api-55f8988cff-brnpl                      Stopping container api
+20s         Normal    Pulled      pod/api-55f8988cff-q9sg7                      Container image "ghcr.io/aethyrai/kubecon-pq-agent/api:sha-a504298" already present on machine and can be accessed by the pod
+20s         Normal    Created     pod/api-55f8988cff-q9sg7                      Container created
+20s         Normal    Started     pod/api-55f8988cff-q9sg7                      Container started
+
+public search during replacement: HTTP 200
+exit: 0
+```

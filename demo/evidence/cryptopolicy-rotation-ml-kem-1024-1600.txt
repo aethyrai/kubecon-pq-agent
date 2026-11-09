@@ -1,0 +1,31 @@
+# cryptopolicy-rotation-ml-kem-1024-1600
+recorded: 2026-11-09T15:59:54-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504298
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl get cryptopolicy hackathon; echo; kubectl -n aethyr-system get events --sort-by=.lastTimestamp | grep -E "GatewayConfigRendered|CryptoPolicyApplied" | tail -3; echo; curl -s -w "\nidentity through tunnel: HTTP %{http_code}\n" http://127.0.0.1:8082/healthz; curl -s -o /dev/null -w "api through tunnel: HTTP %{http_code}\n" "http://127.0.0.1:8085/search?q=argo&size=1"; echo; echo "laptop client handshakes after the rotation:"; sed "s/\x1b\[[0-9;]*m//g" /home/thehermetist/.claude/jobs/675bd0a9/tmp/tunnel-client.log | grep -o "sig_alg=\"[^\"]*\" kem_alg=\"[^\"]*\"" | sort | uniq -c
+NAME        KEM           SIGNATURE   HYBRID   PROFILE   SESSIONS   READY   AGE
+hackathon   ML-KEM-1024   ML-DSA-87   X25519   cnsa2                True    6h41m
+
+97s         Normal   GatewayConfigRendered   configmap/aethyr-gateway-config   config 3b9d9591a17cbe4f: hackathon: ML-KEM-1024/ML-DSA-87; 3 tunnel(s), 2 admitted peer(s); gateway rolled
+97s         Normal   CryptoPolicyApplied     configmap/aethyr-gateway-config   hackathon generation 10: ML-KEM-1024 / ML-DSA-87 (cnsa2)
+
+{"status":"ok"}
+identity through tunnel: HTTP 200
+api through tunnel: HTTP 200
+
+laptop client handshakes after the rotation:
+      7 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024"
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-identity match='handshake completed'
+```
+2026-11-09T22:59:15.230719Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T22:59:33.932412Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T22:59:54.595617Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+```

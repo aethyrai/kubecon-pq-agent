@@ -68,3 +68,11 @@
 | [#71](https://github.com/aethyrai/kubecon-pq-agent/pull/71) | 15:00 | docs(readme): correct claims to match the repository history | pass |
 | [#72](https://github.com/aethyrai/kubecon-pq-agent/pull/72) | 15:02 | Latency fault reaches every api replica; evidence of the fixed chaos token | pass |
 | [#73](https://github.com/aethyrai/kubecon-pq-agent/pull/73) | 15:03 | Evidence: web roll through the retrying deployment-marker hook | pass |
+| [#74](https://github.com/aethyrai/kubecon-pq-agent/pull/74) | 15:09 | README: afternoon section, accurate Dash0 row, evidence per track, regenerated CHANGES.md | pass |
+| [#77](https://github.com/aethyrai/kubecon-pq-agent/pull/77) | 15:37 | otel-agent never gains privileges: clears the one high Radar audit finding | pass |
+| [#76](https://github.com/aethyrai/kubecon-pq-agent/pull/76) | 15:40 | feat(next-move): tell attendees where to be now and next | pass |
+| [#80](https://github.com/aethyrai/kubecon-pq-agent/pull/80) | 15:55 | api, mcp-server, web to sha-a504298: next-move feature live | pass |
+| [#82](https://github.com/aethyrai/kubecon-pq-agent/pull/82) | 16:06 | Roll mcp-server to the latest release | pass |
+| [#81](https://github.com/aethyrai/kubecon-pq-agent/pull/81) | 16:07 | docs(demo): web and trail evidence, submission text | pass |
+| [#83](https://github.com/aethyrai/kubecon-pq-agent/pull/83) | 16:10 | Revert: mcp-server back to sha-a504298 | pass |
+| [#79](https://github.com/aethyrai/kubecon-pq-agent/pull/79) | 16:11 | docs(demo): replace Cline references with Claude Code | pass |
