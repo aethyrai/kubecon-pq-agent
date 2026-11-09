@@ -9,7 +9,8 @@ export function httpApiClient(
   fetchFn: typeof fetch = fetch,
 ): ApiClient {
   const url = (path: string, query?: Record<string, string | undefined>): string => {
-    const u = new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+    // Relative join: a leading '/' would discard any path prefix in API_URL.
+    const u = new URL(path.replace(/^\/+/, ''), baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
     for (const [k, v] of Object.entries(query ?? {}))
       if (v !== undefined && v !== '') u.searchParams.set(k, v);
     return u.toString();

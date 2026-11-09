@@ -182,15 +182,20 @@ export function buildMcpServer(api: ApiClient): McpServer {
       description: 'Sessions for one conference day',
       mimeType: 'application/json',
     },
-    async (uri, { day }) => ({
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: 'application/json',
-          text: JSON.stringify(await api.get(`/schedule/${String(day)}`)),
-        },
-      ],
-    }),
+    async (uri, { day }) => {
+      const parsed = Day.safeParse(String(day));
+      if (!parsed.success)
+        throw new Error(`invalid day ${String(day)}: use 2026-11-08 to 2026-11-12`);
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: 'application/json',
+            text: JSON.stringify(await api.get(`/schedule/${parsed.data}`)),
+          },
+        ],
+      };
+    },
   );
 
   server.registerPrompt(

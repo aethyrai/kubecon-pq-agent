@@ -109,6 +109,10 @@ test('the schedule resource and the plan prompt render', async () => {
   const r = await client.readResource({ uri: 'kubecon://schedule/2026-11-10' });
   assert.equal(r.contents[0]?.mimeType, 'application/json');
   assert.equal(api.calls[0], 'GET /schedule/2026-11-10');
+  await assert.rejects(
+    () => client.readResource({ uri: 'kubecon://schedule/2026-12-25' }),
+    /invalid day/,
+  );
   const p = await client.getPrompt({
     name: 'plan-my-day',
     arguments: { day: '2026-11-10', interests: 'agents' },
@@ -128,8 +132,8 @@ test('httpApiClient builds URLs against the base and surfaces HTTP errors', asyn
       headers: { 'content-type': 'application/json' },
     });
   }) as typeof fetch;
-  const api = httpApiClient('http://api.conf.svc', fetchFn);
+  const api = httpApiClient('http://api.conf.svc/v1', fetchFn);
   assert.deepEqual(await api.get('/search', { q: 'a b', size: undefined }), { ok: true });
-  assert.equal(seen[0], 'GET http://api.conf.svc/search?q=a+b');
+  assert.equal(seen[0], 'GET http://api.conf.svc/v1/search?q=a+b');
   await assert.rejects(() => api.get('/boom'), /HTTP 500/);
 });
