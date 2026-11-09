@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { Hono } from 'hono';
+import { httpApiClient } from './api-client.js';
 import { log } from './log.js';
 import { buildMcpServer } from './mcp.js';
 
@@ -13,7 +14,7 @@ export function buildHttpApp(): Hono {
 
   // Stateless Streamable HTTP: one server + transport per request, so a canary swap loses no session table.
   app.all('/mcp', async (c) => {
-    const server = buildMcpServer();
+    const server = buildMcpServer(httpApiClient());
     // JSON responses, not SSE: the whole reply is in the body when handleRequest resolves, and the
     // per-request server and transport are garbage-collected with it.
     const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true });

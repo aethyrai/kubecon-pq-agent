@@ -10,3 +10,4 @@ coverage/
 *.kubeconfig
 # demo evidence screenshots are committed on purpose
 *.tsbuildinfo
+.model-cache/
