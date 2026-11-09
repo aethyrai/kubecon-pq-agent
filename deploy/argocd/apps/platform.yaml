@@ -15,5 +15,5 @@ spec:
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
-    automated: { prune: true, selfHeal: true }
+    automated: { prune: false, selfHeal: true }
     syncOptions: [ServerSideApply=true]

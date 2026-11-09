@@ -1,0 +1,28 @@
+# aethyr-system: the gateway listens on 7443 for tunnel peers; identity and the operator
+# accept traffic only from conf and from inside the namespace. Egress stays open: the
+# operator talks to the API server and the gateway forwards into conf.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny-ingress, namespace: aethyr-system }
+spec: { podSelector: {}, policyTypes: [Ingress] }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-tunnel-peers, namespace: aethyr-system }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports: [{ protocol: TCP, port: 7443 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-from-conf-and-self, namespace: aethyr-system }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: conf } }
+        - podSelector: {}
