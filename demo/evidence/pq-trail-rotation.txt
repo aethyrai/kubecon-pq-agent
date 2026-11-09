@@ -1,0 +1,21 @@
+# pq-trail-rotation
+recorded: 2026-11-09T12:26:01-07:00  host: aethyr-core  commit: b35c9b1
+
+```
+$ sh -c curl -s http://127.0.0.1:8082/trail/key | cut -c1-160; echo; curl -s http://127.0.0.1:8082/trail | python3 -c "import json,sys; d=json.load(sys.stdin); print(\"total\", d[\"total\"], \"head\", d[\"head\"][:16], \"verification\", d[\"verification\"]); [print(\" \", json.dumps({k:v for k,v in r.items() if k not in (\"sig\",\"prev\",\"hash\",\"publicKey\")})[:300]) for r in d[\"records\"]]"
+{"algorithm":"ML-DSA-65","publicKey":"Mw4jfs53CxUKC2bNAvj5VgKTMBMd5hpMZhsFm0Z1kUoZnEbZuCFOHbruMFw+ltUbIJ/xUJobx9sg2wK5J/tgWl32KIke/rYosMeadg7yYH2mtL9eGyHW5FFeY8
+
+total 2 head ad15058f43d009c8 verification {'ok': True, 'count': 2}
+  {"seq": 1, "at": "2026-11-09T19:23:04.792Z", "kind": "policy.observed", "data": {"policy": "hackathon", "kem": "ML-KEM-768", "signature": "ML-DSA-65"}, "alg": "ML-DSA-65"}
+  {"seq": 2, "at": "2026-11-09T19:23:45.206Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-768", "toKem": "ML-KEM-1024", "fromSignature": "ML-DSA-65", "toSignature": "ML-DSA-87"}, "alg": "ML-DSA-65"}
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-identity match='handshake completed'
+```
+2026-11-09T19:25:03.448472Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T19:25:19.706487Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T19:26:01.857053Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T19:26:01.882638Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T19:26:01.901117Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-87" kem_alg="ML-KEM-1024" hash_alg="SHA3-256" aead_alg="AES-256-GCM" peer_did="did:aethyr:device:HBsbJDGZGFK8ESbicsV_fvWUDjWg__mqX5a0QBV73hAY" tenant="did:aethyr:org:kubecon-pq-agent"
+```

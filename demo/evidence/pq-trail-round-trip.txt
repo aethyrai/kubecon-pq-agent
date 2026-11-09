@@ -1,0 +1,11 @@
+# pq-trail-round-trip
+recorded: 2026-11-09T12:28:52-07:00  host: aethyr-core  commit: b35c9b1
+
+```
+$ sh -c curl -s http://127.0.0.1:8082/trail | python3 -c "import json,sys; d=json.load(sys.stdin); print(\"fingerprint\", d[\"fingerprint\"], \"head\", d[\"head\"][:16], \"total\", d[\"total\"], \"verification\", d[\"verification\"]); [print(\" \", json.dumps({k:v for k,v in r.items() if k not in (\"sig\",\"prev\",\"hash\",\"publicKey\")})[:260]) for r in d[\"records\"]]"
+fingerprint sha256:3008e2c2f55afa9b6858cde136b2be6c head a1c227467d79a0ff total 3 verification {'ok': True, 'count': 3}
+  {"seq": 1, "at": "2026-11-09T19:23:04.792Z", "kind": "policy.observed", "data": {"policy": "hackathon", "kem": "ML-KEM-768", "signature": "ML-DSA-65"}, "alg": "ML-DSA-65"}
+  {"seq": 2, "at": "2026-11-09T19:23:45.206Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-768", "toKem": "ML-KEM-1024", "fromSignature": "ML-DSA-65", "toSignature": "ML-DSA-87"}, "alg": "ML-DSA-65"}
+  {"seq": 3, "at": "2026-11-09T19:26:35.226Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-1024", "toKem": "ML-KEM-768", "fromSignature": "ML-DSA-87", "toSignature": "ML-DSA-65"}, "alg": "ML-DSA-65"}
+exit: 0
+```
