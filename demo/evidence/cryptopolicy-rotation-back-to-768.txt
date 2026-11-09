@@ -1,0 +1,14 @@
+# cryptopolicy-rotation-back-to-768
+recorded: 2026-11-09T11:00:21-07:00  host: aethyr-core  commit: 2bd62fb
+
+```
+$ kubectl get cryptopolicy hackathon
+NAME        KEM          SIGNATURE   HYBRID   PROFILE     SESSIONS   READY   AGE
+hackathon   ML-KEM-768   ML-DSA-65   X25519   hackathon              True    101m
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-identity match='handshake completed'
+```
+2026-11-09T17:59:15.677367Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+```
