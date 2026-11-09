@@ -7,17 +7,12 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
-    "start": "node --import ./dist/otel.js dist/server.js"
+    "start": "node --import @kubecon-pq-agent/otel/register dist/server.js"
   },
   "dependencies": {
     "@hono/node-server": "2.1.6",
+    "@kubecon-pq-agent/otel": "0.0.0",
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@opentelemetry/api": "1.10.0",
-    "@opentelemetry/auto-instrumentations-node": "0.83.0",
-    "@opentelemetry/exporter-metrics-otlp-grpc": "0.301.0",
-    "@opentelemetry/exporter-trace-otlp-grpc": "0.301.0",
-    "@opentelemetry/sdk-metrics": "3.1.0",
-    "@opentelemetry/sdk-node": "0.301.0",
     "hono": "4.13.17",
     "pino": "10.4.0",
     "zod": "4.6.7"

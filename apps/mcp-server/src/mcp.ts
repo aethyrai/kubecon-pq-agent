@@ -1,3 +1,4 @@
+import { withSpan } from '@kubecon-pq-agent/otel';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ApiClient } from './api-client.js';
@@ -23,6 +24,17 @@ const Filters = {
     .describe('Co-located event name, e.g. "ArgoCon", "Observability Day"'),
 };
 
+/** Wrap a tool handler in a span named after the tool, recording argument keys (never values). */
+const traced =
+  <A extends Record<string, unknown>, R>(name: string, fn: (args: A) => Promise<R>) =>
+  (args: A): Promise<R> =>
+    withSpan(
+      'mcp-server',
+      `mcp.tool ${name}`,
+      { 'mcp.tool': name, 'mcp.args': Object.keys(args).join(',') },
+      () => fn(args),
+    );
+
 const text = (v: unknown) => ({
   content: [
     { type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) },
@@ -40,8 +52,9 @@ export function buildMcpServer(api: ApiClient): McpServer {
       description: 'Liveness check. Returns pong and the server time.',
       inputSchema: { message: z.string().max(200).optional() },
     },
-    async ({ message }) =>
+    traced('ping', async ({ message }) =>
       text({ pong: true, echo: message ?? null, at: new Date().toISOString() }),
+    ),
   );
 
   server.registerTool(
@@ -60,7 +73,7 @@ export function buildMcpServer(api: ApiClient): McpServer {
         ...Filters,
       },
     },
-    async ({ query, size, ...f }) =>
+    traced('search_sessions', async ({ query, size, ...f }) =>
       text(
         await api.get('/search', {
           q: query,
@@ -72,6 +85,7 @@ export function buildMcpServer(api: ApiClient): McpServer {
           event: f.event,
         }),
       ),
+    ),
   );
 
   server.registerTool(
@@ -88,7 +102,7 @@ export function buildMcpServer(api: ApiClient): McpServer {
         event: Filters.event,
       },
     },
-    async ({ day, ...f }) =>
+    traced('get_schedule', async ({ day, ...f }) =>
       text(
         await api.get(`/schedule/${day}`, {
           track: f.track,
@@ -97,6 +111,7 @@ export function buildMcpServer(api: ApiClient): McpServer {
           event: f.event,
         }),
       ),
+    ),
   );
 
   server.registerTool(
@@ -117,13 +132,14 @@ export function buildMcpServer(api: ApiClient): McpServer {
         ...Filters,
       },
     },
-    async ({ interests, size, ...f }) =>
+    traced('recommend', async ({ interests, size, ...f }) =>
       text(
         await api.post(`/recommend${size ? `?size=${size}` : ''}`, {
           interests,
           filters: { ...f, captioned: f.captioned === undefined ? undefined : String(f.captioned) },
         }),
       ),
+    ),
   );
 
   server.registerTool(
@@ -134,8 +150,9 @@ export function buildMcpServer(api: ApiClient): McpServer {
         'Given session ids, return the pairs that overlap in time, with the overlap in minutes, plus any ids that do not exist.',
       inputSchema: { session_ids: z.array(z.string().min(1)).min(2).max(40) },
     },
-    async ({ session_ids }) =>
+    traced('check_conflicts', async ({ session_ids }) =>
       text(await api.get('/plan/conflicts', { ids: session_ids.join(',') })),
+    ),
   );
 
   server.registerTool(
@@ -149,7 +166,9 @@ export function buildMcpServer(api: ApiClient): McpServer {
         size: z.number().int().min(1).max(50).optional(),
       },
     },
-    async ({ query, size }) => text(await api.get('/booths', { q: query, size: size?.toString() })),
+    traced('find_booths', async ({ query, size }) =>
+      text(await api.get('/booths', { q: query, size: size?.toString() })),
+    ),
   );
 
   server.registerTool(
@@ -160,7 +179,7 @@ export function buildMcpServer(api: ApiClient): McpServer {
         'Sponsor-hosted co-located and side events around the conference, with host, times, and registration notes.',
       inputSchema: { day: Day.optional() },
     },
-    async ({ day }) => text(await api.get('/side-events', { day })),
+    traced('side_events', async ({ day }) => text(await api.get('/side-events', { day }))),
   );
 
   server.registerTool(
@@ -171,7 +190,9 @@ export function buildMcpServer(api: ApiClient): McpServer {
         'Accessibility facts for a room: wheelchair route, captioning, hearing loop, nearest quiet room and accessible restroom. Use the room id from a session.',
       inputSchema: { room_id: z.string().min(1).max(40) },
     },
-    async ({ room_id }) => text(await api.get(`/rooms/${encodeURIComponent(room_id)}/access`)),
+    traced('room_accessibility', async ({ room_id }) =>
+      text(await api.get(`/rooms/${encodeURIComponent(room_id)}/access`)),
+    ),
   );
 
   server.registerResource(

@@ -7,12 +7,13 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
-    "start": "node dist/main.js"
+    "start": "node --import @kubecon-pq-agent/otel/register dist/main.js"
   },
   "dependencies": {
     "@elastic/elasticsearch": "9.2.0",
+    "@kubecon-pq-agent/embeddings": "0.0.0",
     "@kubecon-pq-agent/es-client": "0.0.0",
-    "@kubecon-pq-agent/embeddings": "0.0.0"
+    "@kubecon-pq-agent/otel": "0.0.0"
   },
   "devDependencies": {
     "@types/node": "22.19.0"

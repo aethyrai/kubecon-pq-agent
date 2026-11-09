@@ -1,4 +1,5 @@
 import type { Client, estypes } from '@elastic/elasticsearch';
+import { annotate, withSpan } from '@kubecon-pq-agent/otel';
 import type { IndexName } from './mappings.js';
 
 /** Filters ride on both legs so the fused list is already constrained. */
@@ -71,31 +72,50 @@ export async function hybridSearch<T extends object>(
   client: Client,
   q: HybridQuery,
 ): Promise<Hit<T>[]> {
+  return withSpan(
+    'es-client',
+    'search.hybrid',
+    {
+      'search.index': q.index,
+      'search.text_len': q.text.length,
+      'search.has_vector': Boolean(q.vector && q.vector.length > 0),
+      'search.size': q.size,
+    },
+    () => hybridSearchInner(client, q),
+  );
+}
+
+async function hybridSearchInner<T extends object>(
+  client: Client,
+  q: HybridQuery,
+): Promise<Hit<T>[]> {
   const depth = q.depth ?? Math.max(q.size * 3, 30);
   const filter = filterClauses(q.filters);
   const sources = new Map<string, T>();
   const legs: Array<{ leg: 'bm25' | 'knn'; ids: string[] }> = [];
 
   if (q.text.trim().length > 0) {
-    const res = await client.search<T>({
-      index: q.index,
-      size: depth,
-      query: {
-        bool: {
-          must: [
-            {
-              multi_match: {
-                query: q.text,
-                fields: q.textFields,
-                type: 'best_fields',
-                fuzziness: 'AUTO',
+    const res = await withSpan('es-client', 'search.leg.bm25', { 'search.depth': depth }, () =>
+      client.search<T>({
+        index: q.index,
+        size: depth,
+        query: {
+          bool: {
+            must: [
+              {
+                multi_match: {
+                  query: q.text,
+                  fields: q.textFields,
+                  type: 'best_fields',
+                  fuzziness: 'AUTO',
+                },
               },
-            },
-          ],
-          filter,
+            ],
+            filter,
+          },
         },
-      },
-    });
+      }),
+    );
     const ids: string[] = [];
     for (const h of res.hits.hits) {
       if (h._id && h._source) {
@@ -106,18 +126,25 @@ export async function hybridSearch<T extends object>(
     legs.push({ leg: 'bm25', ids });
   }
 
-  if (q.vector && q.vector.length > 0) {
-    const res = await client.search<T>({
-      index: q.index,
-      size: depth,
-      knn: {
-        field: q.vectorField ?? 'embedding',
-        query_vector: q.vector,
-        k: depth,
-        num_candidates: Math.max(depth * 4, 100),
-        ...(filter.length > 0 ? { filter: { bool: { filter } } } : {}),
-      },
-    });
+  const vector = q.vector;
+  if (vector && vector.length > 0) {
+    const res = await withSpan(
+      'es-client',
+      'search.leg.knn',
+      { 'search.depth': depth, 'search.dims': vector.length },
+      () =>
+        client.search<T>({
+          index: q.index,
+          size: depth,
+          knn: {
+            field: q.vectorField ?? 'embedding',
+            query_vector: vector,
+            k: depth,
+            num_candidates: Math.max(depth * 4, 100),
+            ...(filter.length > 0 ? { filter: { bool: { filter } } } : {}),
+          },
+        }),
+    );
     const ids: string[] = [];
     for (const h of res.hits.hits) {
       if (h._id && h._source) {
@@ -141,7 +168,13 @@ export async function hybridSearch<T extends object>(
       .map((h) => ({ id: h._id ?? '', score: 0, source: h._source as T, legs: [] }));
   }
 
-  return rrf(legs)
+  const fused = rrf(legs);
+  annotate({
+    'search.legs': legs.map((l) => l.leg).join('+'),
+    'search.fused': fused.length,
+    'search.knn_only': fused.filter((f) => f.legs.length === 1 && f.legs[0] === 'knn').length,
+  });
+  return fused
     .slice(0, q.size)
     .map((r) => ({ id: r.id, score: r.score, source: sources.get(r.id) as T, legs: r.legs }))
     .filter((h) => h.source !== undefined);

@@ -28,6 +28,10 @@ spec:
           env:
             - { name: API_URL, value: {{ .Values.apiUrl | quote }} }
             - { name: IDENTITY_URL, value: {{ .Values.identityUrl | quote }} }
+            - { name: OTEL_SERVICE_NAME, value: web }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: http://otel-collector.observability.svc:4318 }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: http/protobuf }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.version={{ .Values.image.tag }},deployment.environment.name=hackathon" }
             - { name: NEXT_PUBLIC_DASH0_ENDPOINT, value: {{ .Values.dash0.endpoint | quote }} }
             - name: NEXT_PUBLIC_DASH0_TOKEN
               valueFrom: { secretKeyRef: { name: {{ .Values.dash0.tokenSecret }}, key: token, optional: true } }

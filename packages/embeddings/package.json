@@ -14,7 +14,8 @@
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js"
   },
   "dependencies": {
-    "@huggingface/transformers": "3.8.1"
+    "@huggingface/transformers": "3.8.1",
+    "@kubecon-pq-agent/otel": "0.0.0"
   },
   "devDependencies": {
     "@types/node": "22.19.0"

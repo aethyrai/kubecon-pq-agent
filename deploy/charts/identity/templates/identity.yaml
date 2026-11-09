@@ -90,6 +90,9 @@ spec:
           ports: [{ name: http, containerPort: 8082 }]
           env:
             - { name: PEER_NAMESPACE, value: {{ .Release.Namespace }} }
+            - { name: OTEL_SERVICE_NAME, value: identity }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: http://otel-collector.observability.svc:4317 }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.version={{ .Values.image.tag }},deployment.environment.name=hackathon" }
           resources: {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false

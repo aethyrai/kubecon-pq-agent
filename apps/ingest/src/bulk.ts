@@ -1,8 +1,22 @@
 import type { Client } from '@elastic/elasticsearch';
 import type { IndexName } from '@kubecon-pq-agent/es-client';
+import { withSpan } from '@kubecon-pq-agent/otel';
 
 /** Idempotent upsert of documents keyed by `id` (or `peer_id`) into an alias. */
 export async function bulkUpsert<T extends { id: string }>(
+  client: Client,
+  index: IndexName,
+  docs: T[],
+): Promise<{ indexed: number; errors: number }> {
+  return withSpan(
+    'ingest',
+    'ingest.bulk',
+    { 'ingest.index': index, 'ingest.docs': docs.length },
+    () => bulkUpsertInner(client, index, docs),
+  );
+}
+
+async function bulkUpsertInner<T extends { id: string }>(
   client: Client,
   index: IndexName,
   docs: T[],

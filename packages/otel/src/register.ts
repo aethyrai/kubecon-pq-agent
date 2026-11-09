@@ -1,4 +1,5 @@
-// Loaded with --import before the app: OTel SDK with OTLP gRPC export to the in-cluster collector.
+// Load with `node --import @kubecon-pq-agent/otel/register`: OTel SDK with OTLP gRPC export to the
+// in-cluster collector, auto-instrumentation for http/undici/pino and friends, graceful shutdown.
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
@@ -7,8 +8,9 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 
 const endpoint =
   process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://otel-collector.observability.svc:4317';
+const serviceName = process.env.OTEL_SERVICE_NAME ?? 'unknown-service';
 const sdk = new NodeSDK({
-  serviceName: process.env.OTEL_SERVICE_NAME ?? 'mcp-server',
+  serviceName,
   traceExporter: new OTLPTraceExporter({ url: endpoint }),
   metricReaders: [
     new PeriodicExportingMetricReader({
@@ -17,7 +19,11 @@ const sdk = new NodeSDK({
     }),
   ],
   instrumentations: [
-    getNodeAutoInstrumentations({ '@opentelemetry/instrumentation-fs': { enabled: false } }),
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-fs': { enabled: false },
+      '@opentelemetry/instrumentation-dns': { enabled: false },
+      '@opentelemetry/instrumentation-net': { enabled: false },
+    }),
   ],
 });
 sdk.start();
