@@ -10,11 +10,24 @@ import {
   speakerEmbeddingText,
 } from './normalize.js';
 import {
+  fetchColoc,
+  LF_COLOC_CNCF_URL,
+  LF_COLOC_SPONSOR_URL,
+  loadColocFixture,
+  sessionsFromCncfHosted,
+  sideEventsFromSponsorHosted,
+} from './sources/lf-coloc.js';
+import {
   extractSchedData,
   fetchSchedulePage,
   type LfSchedData,
   loadSchedFixture,
 } from './sources/lf-sched.js';
+import {
+  fetchSponsorDirectory,
+  loadSponsorFixture,
+  parseSponsorDirectory,
+} from './sources/lf-sponsors.js';
 
 /**
  * INGEST_SOURCE=fixture (default) reads fixtures/sched/lf-sched-data-*.json.
@@ -40,13 +53,31 @@ const client = clientFromEnv();
 const embedder = embedderFromEnv();
 await ensureAllIndices(client);
 
+const live = (process.env.INGEST_SOURCE ?? 'fixture') === 'live';
+const lfDir = process.env.LF_FIXTURE_DIR ?? 'fixtures/lf';
 const data = await loadSchedule();
-const sessions = normalizeSessions(data);
+const colocSponsor = live
+  ? await fetchColoc(LF_COLOC_SPONSOR_URL)
+  : await loadColocFixture(`${lfDir}/coloc-sponsor-hosted-2026-11-09.html`);
+const colocCncf = live
+  ? await fetchColoc(LF_COLOC_CNCF_URL)
+  : await loadColocFixture(`${lfDir}/coloc-cncf-hosted-2026-11-09.html`);
+const exhibitors = live
+  ? parseSponsorDirectory(await fetchSponsorDirectory())
+  : await loadSponsorFixture(`${lfDir}/sponsor-directory-2026-11-09.html`);
+const sideEvents = sideEventsFromSponsorHosted(colocSponsor);
+const sessions = [...normalizeSessions(data), ...sessionsFromCncfHosted(colocCncf)];
 const speakers = normalizeSpeakers(data);
 const rooms = normalizeRooms(data);
 
 const sessionVectors = await embedder.embed(sessions.map(sessionEmbeddingText));
 const speakerVectors = await embedder.embed(speakers.map(speakerEmbeddingText));
+const exhibitorVectors = await embedder.embed(
+  exhibitors.map((e) => [e.name, e.description, e.categories.join(', ')].join('\n')),
+);
+const sideEventVectors = await embedder.embed(
+  sideEvents.map((e) => [e.name, e.description].join('\n')),
+);
 const withVec = <T extends { embedding?: number[] }>(docs: T[], vecs: number[][]): T[] =>
   docs.map((d, i) => {
     const v = vecs[i];
@@ -56,11 +87,13 @@ const withVec = <T extends { embedding?: number[] }>(docs: T[], vecs: number[][]
 const r1 = await bulkUpsert(client, 'sessions', withVec(sessions, sessionVectors));
 const r2 = await bulkUpsert(client, 'speakers', withVec(speakers, speakerVectors));
 const r3 = await bulkUpsert(client, 'rooms', rooms);
-console.log(`sessions: ${r1.indexed} indexed, ${r1.errors} errors`);
-console.log(`speakers: ${r2.indexed} indexed, ${r2.errors} errors`);
-console.log(`rooms:    ${r3.indexed} indexed, ${r3.errors} errors`);
-for (const alias of ['sessions', 'speakers', 'rooms'] as const) {
+const r4 = await bulkUpsert(client, 'exhibitors', withVec(exhibitors, exhibitorVectors));
+const r5 = await bulkUpsert(client, 'side_events', withVec(sideEvents, sideEventVectors));
+const results = { sessions: r1, speakers: r2, rooms: r3, exhibitors: r4, side_events: r5 };
+for (const [name, r] of Object.entries(results))
+  console.log(`${name.padEnd(12)} ${r.indexed} indexed, ${r.errors} errors`);
+for (const alias of ['sessions', 'speakers', 'rooms', 'exhibitors', 'side_events'] as const) {
   const c = await client.count({ index: alias });
   console.log(`count ${alias}: ${c.count}`);
 }
-if (r1.errors + r2.errors + r3.errors > 0) process.exit(1);
+if (Object.values(results).some((r) => r.errors > 0)) process.exit(1);
