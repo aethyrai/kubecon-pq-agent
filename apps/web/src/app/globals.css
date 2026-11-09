@@ -683,3 +683,33 @@ ol.facts li {
   margin: 0.5rem 0;
   max-width: 68ch;
 }
+
+/* Post-quantum trail */
+output.verdict {
+  font-weight: 600;
+  font-size: 1.125rem;
+  border-left: 3px solid var(--accent);
+  padding: 0.5rem 0.875rem;
+  background: var(--card);
+}
+ol.trail {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  border-top: 1px solid var(--rule);
+}
+ol.trail li {
+  display: grid;
+  gap: 0.25rem 1.25rem;
+  padding: 0.875rem 0 0.875rem 0.875rem;
+  border-bottom: 1px solid var(--rule);
+  border-left: 3px solid transparent;
+}
+@media (min-width: 40rem) {
+  ol.trail li {
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+  }
+}
+ol.trail li.rotated {
+  border-left-color: var(--accent);
+}

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { buildApp, type PeerRegistry } from '../app.js';
 import { MemoryTokenStore } from '../store.js';
 import { hashToken, isExpired, newToken, peerIdFromPublicKey, TOKEN_TTL_MS } from '../tokens.js';
+import { MemoryTrailStore, Trail } from '../trail.js';
 
 const PUB = Buffer.alloc(1952, 7).toString('base64');
 const registry = (admit: boolean): PeerRegistry & { calls: string[] } => ({
@@ -103,4 +104,64 @@ test('only the token hash is ever stored', () => {
   assert.notEqual(t.token, t.hash);
   assert.equal(t.hash, hashToken(t.token));
   assert.equal(isExpired({ peerId: 'p', issuedAt: '', expiresAt: '2000-01-01T00:00:00Z' }), true);
+});
+
+test('register and verify append signed trail records, and /trail serves a verified chain', async () => {
+  const now = new Date('2026-11-09T19:00:00Z');
+  const trail = await Trail.open(new MemoryTrailStore(), () => now);
+  const app = buildApp(registry(true), new MemoryTokenStore(), () => now, trail);
+  const reg = await app.request('/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ publicKey: PUB, algorithm: 'ML-DSA-65' }),
+  });
+  assert.equal(reg.status, 201);
+  const { token } = (await reg.json()) as { token: string };
+  const ver = await app.request('/verify', { headers: { authorization: `Bearer ${token}` } });
+  assert.equal(ver.status, 200);
+  const res = await app.request('/trail');
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    algorithm: string;
+    publicKey: string;
+    verification: { ok: boolean; count: number };
+    records: Array<{ kind: string; data: Record<string, string> }>;
+  };
+  assert.equal(body.algorithm, 'ML-DSA-65');
+  assert.equal(body.publicKey, trail.publicKey);
+  assert.deepEqual(body.verification, { ok: true, count: 3 });
+  assert.deepEqual(
+    body.records.map((r) => r.kind),
+    ['peer.registered', 'token.issued', 'token.verified'],
+  );
+  assert.equal(body.records[0]?.data.peer, peerIdFromPublicKey(PUB));
+  const key = await app.request('/trail/key');
+  assert.equal(((await key.json()) as { publicKey: string }).publicKey, trail.publicKey);
+});
+
+test('/trail caps the window and reports total and from', async () => {
+  const now = new Date('2026-11-09T19:00:00Z');
+  const trail = await Trail.open(new MemoryTrailStore(), () => now);
+  for (let i = 0; i < 7; i++) await trail.append('token.verified', { peer: `peer-${i}` });
+  const app = buildApp(registry(true), new MemoryTokenStore(), () => now, trail);
+  const body = (await (await app.request('/trail?limit=3')).json()) as {
+    total: number;
+    from: number;
+    records: Array<{ seq: number }>;
+    verification: { ok: boolean; count: number };
+  };
+  assert.equal(body.total, 7);
+  assert.equal(body.from, 5);
+  assert.deepEqual(
+    body.records.map((r) => r.seq),
+    [5, 6, 7],
+  );
+  assert.deepEqual(body.verification, { ok: true, count: 7 });
+  const huge = (await (await app.request('/trail?limit=99999')).json()) as { records: unknown[] };
+  assert.equal(huge.records.length, 7);
+});
+
+test('/trail answers 404 when the trail is not enabled', async () => {
+  const app = buildApp(registry(true), new MemoryTokenStore());
+  assert.equal((await app.request('/trail')).status, 404);
 });

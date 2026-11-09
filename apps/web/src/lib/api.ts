@@ -150,3 +150,45 @@ export function dayLabel(day: string): string {
   if (day === '2026-11-08') return 'Sunday';
   return DAYS.find((d) => d.day === day)?.label ?? day;
 }
+
+/** The identity service, reachable in-cluster only. Serves the signed post-quantum trail. */
+export const IDENTITY_URL = process.env.IDENTITY_URL ?? 'http://127.0.0.1:8082';
+
+export interface TrailRecord {
+  seq: number;
+  at: string;
+  kind: string;
+  data: Record<string, string>;
+  prev: string;
+  hash: string;
+  sig: string;
+  alg: string;
+}
+export interface TrailResponse {
+  algorithm: string;
+  publicKey: string;
+  head: string;
+  total?: number;
+  from?: number;
+  verification: { ok: boolean; count: number; brokenAt?: number; reason?: string };
+  records: TrailRecord[];
+}
+export const trail = async (): Promise<TrailResponse> => {
+  const res = await fetch(`${IDENTITY_URL}/trail`, {
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error(`identity /trail: HTTP ${res.status}`);
+  const body: unknown = await res.json();
+  if (!isTrailResponse(body)) throw new Error('identity /trail: unexpected shape');
+  return body;
+};
+function isTrailResponse(v: unknown): v is TrailResponse {
+  return (
+    isObject(v) &&
+    typeof v.publicKey === 'string' &&
+    Array.isArray(v.records) &&
+    isObject(v.verification) &&
+    typeof v.verification.ok === 'boolean'
+  );
+}

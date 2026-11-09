@@ -2,6 +2,11 @@ import { PQPeerSpec } from '@kubecon-pq-agent/schema';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { TokenStore } from './store.js';
+import type { Trail } from './trail.js';
+
+/** Most records one /trail response carries. */
+export const TRAIL_PAGE = 500;
+
 import { hashToken, isExpired, newToken, peerIdFromPublicKey, TOKEN_TTL_MS } from './tokens.js';
 
 export interface PeerRegistry {
@@ -43,6 +48,7 @@ export function buildApp(
   registry: PeerRegistry,
   store: TokenStore,
   now: () => Date = () => new Date(),
+  trail?: Trail,
 ): Hono {
   const app = new Hono();
   app.get('/healthz', (c) => c.json({ status: 'ok' }));
@@ -86,6 +92,8 @@ export function buildApp(
       expiresAt: expiresAt.toISOString(),
     });
     await registry.tokenIssued(peerId, issuedAt.toISOString());
+    await trail?.append('peer.registered', { peer: peerId, algorithm: b.algorithm });
+    await trail?.append('token.issued', { peer: peerId, expiresAt: expiresAt.toISOString() });
     return c.json({ peerId, token: t.token, expiresAt: expiresAt.toISOString() }, 201);
   });
 
@@ -97,7 +105,35 @@ export function buildApp(
     const rec = await store.get(hashToken(token));
     if (!rec) return c.json({ valid: false, reason: 'unknown' }, 401);
     if (isExpired(rec, now())) return c.json({ valid: false, reason: 'expired' }, 401);
+    await trail?.append('token.verified', { peer: rec.peerId });
     return c.json({ valid: true, peerId: rec.peerId, expiresAt: rec.expiresAt });
+  });
+
+  /**
+   * The signed trail, verified at read time against this service's own public key. The whole
+   * chain is verified; the response carries the last `limit` records (default and maximum
+   * 500) so the page and the verifier stay fast. A window verifies from its first record's
+   * own previous hash.
+   */
+  app.get('/trail', (c) => {
+    if (!trail) return c.json({ error: 'trail not enabled' }, 404);
+    const all = trail.list();
+    const asked = Number(c.req.query('limit') ?? TRAIL_PAGE);
+    const limit = Number.isInteger(asked) && asked > 0 ? Math.min(asked, TRAIL_PAGE) : TRAIL_PAGE;
+    const records = all.slice(-limit);
+    return c.json({
+      algorithm: 'ML-DSA-65',
+      publicKey: trail.publicKey,
+      head: trail.head,
+      total: all.length,
+      from: records[0]?.seq ?? 0,
+      verification: trail.verify(),
+      records,
+    });
+  });
+  app.get('/trail/key', (c) => {
+    if (!trail) return c.json({ error: 'trail not enabled' }, 404);
+    return c.json({ algorithm: 'ML-DSA-65', publicKey: trail.publicKey });
   });
   return app;
 }

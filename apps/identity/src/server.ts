@@ -1,9 +1,12 @@
 import { serve } from '@hono/node-server';
-import { API_GROUP, API_VERSION, type PQPeerSpec } from '@kubecon-pq-agent/schema';
+import { API_GROUP, API_VERSION, CryptoPolicy, type PQPeerSpec } from '@kubecon-pq-agent/schema';
 import * as k8s from '@kubernetes/client-node';
 import pino from 'pino';
 import { buildApp, type PeerRegistry } from './app.js';
+import { type PolicySnapshot, recordPolicyChanges } from './policy-watch.js';
 import { isNotFound, SecretTokenStore } from './store.js';
+import { Trail } from './trail.js';
+import { SecretTrailStore } from './trail-store.js';
 
 const log = pino({ level: process.env.LOG_LEVEL ?? 'info', base: { service: 'identity' } });
 const ns = process.env.PEER_NAMESPACE ?? 'aethyr-system';
@@ -72,7 +75,39 @@ const registry: PeerRegistry = {
   },
 };
 
-const app = buildApp(registry, new SecretTokenStore(core, ns));
+const trail = await Trail.open(new SecretTrailStore(core, ns));
+log.info({ publicKey: trail.publicKey, records: trail.list().length }, 'trail open');
+
+/** Poll CryptoPolicy every 5 s and write a signed record on first sight and on every rotation. */
+let snapshot = new Map<string, PolicySnapshot>();
+async function pollPolicies(): Promise<void> {
+  try {
+    // CryptoPolicy is cluster-scoped.
+    const res: unknown = await custom.listClusterCustomObject({
+      group: API_GROUP,
+      version: API_VERSION,
+      plural: 'cryptopolicies',
+    });
+    const items = (res as { items?: unknown[] }).items ?? [];
+    const current: PolicySnapshot[] = [];
+    for (const item of items) {
+      const parsed = CryptoPolicy.safeParse(item);
+      if (parsed.success)
+        current.push({
+          name: parsed.data.metadata.name,
+          kem: parsed.data.spec.kem,
+          signature: parsed.data.spec.signature,
+        });
+    }
+    snapshot = await recordPolicyChanges(trail, snapshot, current);
+  } catch (err) {
+    log.warn({ err }, 'policy poll failed');
+  }
+}
+await pollPolicies();
+setInterval(() => void pollPolicies(), 5000);
+
+const app = buildApp(registry, new SecretTokenStore(core, ns), () => new Date(), trail);
 const port = Number(process.env.PORT ?? 8082);
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) =>
   log.info({ port: info.port }, 'identity listening'),
