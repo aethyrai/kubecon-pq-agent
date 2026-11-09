@@ -10,7 +10,8 @@ found=0
 # Plain manifests
 while IFS= read -r f; do
   found=1; echo "kubeconform $f"; kubeconform "${args[@]}" "$f"
-done < <(find deploy/argocd deploy/crds -name '*.yaml' 2>/dev/null | sort)
+done < <(find deploy/argocd deploy/crds deploy/platform -name '*.yaml' \
+  -not -path '*/templates/*' -not -name 'Chart.yaml' -not -name 'values*.yaml' 2>/dev/null | sort)
 # Rendered charts
 while IFS= read -r chart; do
   found=1
