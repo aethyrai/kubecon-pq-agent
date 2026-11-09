@@ -4,7 +4,7 @@
 #   demo/chaos/es-latency.sh reset
 # Goes through the tunnel (127.0.0.1:8080). CHAOS_TOKEN comes from ~/.secrets/chaos-token.
 set -euo pipefail
-API="${API_URL:-http://127.0.0.1:8080}"
+API="${API_URL:-http://127.0.0.1:8085}"
 TOKEN=$(cat "${CHAOS_TOKEN_FILE:-$HOME/.secrets/chaos-token}")
 case "${1:-}" in
   reset) curl -sf -X POST -H "X-Chaos-Token: $TOKEN" "$API/chaos/reset"; echo ;;
