@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { CryptoPolicy, PQPeer, PQTunnel } from '@kubecon-pq-agent/schema';
-import { renderAllowlist, renderGatewayConfig, renderTunnel, upstreamAddress } from '../render.js';
+import {
+  renderAllowlist,
+  renderGatewayConfig,
+  renderTunnel,
+  SENTINEL_DID,
+  upstreamAddress,
+} from '../render.js';
 
 const policy768: CryptoPolicy = {
   apiVersion: 'aethyr.io/v1alpha1',

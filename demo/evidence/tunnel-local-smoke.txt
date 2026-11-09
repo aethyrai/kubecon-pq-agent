@@ -1,0 +1,7 @@
+# Local aethyr-tunnel smoke test, 2026-11-09T08:31:00-07:00 (SOP 5.4 prep). Two endpoints on the laptop, mTLS + AWP v2.
+
+2026-11-09T15:29:52.234794Z  INFO aethyr_node::tunnel: tunnel responder ready listen=127.0.0.1:17443 target=127.0.0.1:18080
+2026-11-09T15:29:54.240870Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EG8zmdCHkVvt0va3tNSVzBUV3iWDm6jrLNHpncBQT1SV" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T15:29:54.240883Z  INFO aethyr_node::tunnel: tunnel session established (responder) peer_did=did:aethyr:device:EG8zmdCHkVvt0va3tNSVzBUV3iWDm6jrLNHpncBQT1SV
+
+curl http://127.0.0.1:17000/ through the tunnel -> HTTP 200
