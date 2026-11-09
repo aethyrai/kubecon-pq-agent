@@ -12,13 +12,13 @@
     "packages/*"
   ],
   "scripts": {
-    "typecheck": "tsc -b tsconfig.json",
+    "typecheck": "tsc -b tsconfig.json --force",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "tsc -b tsconfig.json && scripts/ws.sh test",
+    "test": "tsc -b tsconfig.json --force && scripts/ws.sh test",
     "helm:lint": "scripts/helm-lint.sh",
     "kubeconform": "scripts/kubeconform.sh",
-    "build": "tsc -b tsconfig.json"
+    "build": "tsc -b tsconfig.json --force"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.4",
