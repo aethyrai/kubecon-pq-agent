@@ -1,0 +1,32 @@
+# api-rollout-canary
+recorded: 2026-11-09T10:18:52-07:00  host: aethyr-core  commit: d350396
+
+```
+$ kubectl argo rollouts get rollout api -n conf
+Name:            api
+Namespace:       conf
+Status:          ✔ Healthy
+Strategy:        Canary
+  Step:          5/5
+  SetWeight:     100
+  ActualWeight:  100
+Images:          ghcr.io/aethyrai/kubecon-pq-agent/api:sha-0722e21 (stable)
+Replicas:
+  Desired:       2
+  Current:       2
+  Updated:       2
+  Ready:         2
+  Available:     2
+
+NAME                             KIND        STATUS        AGE   INFO
+⟳ api                            Rollout     ✔ Healthy     70m   
+├──# revision:3                                                  
+│  └──⧉ api-7f95fcbcff           ReplicaSet  ✔ Healthy     3m4s  stable
+│     ├──□ api-7f95fcbcff-jfcwm  Pod         ✔ Running     3m4s  ready:1/1
+│     └──□ api-7f95fcbcff-4p5r2  Pod         ✔ Running     2m2s  ready:1/1
+├──# revision:2                                                  
+│  └──⧉ api-584f499458           ReplicaSet  • ScaledDown  59m   
+└──# revision:1                                                  
+   └──⧉ api-7dd669b454           ReplicaSet  • ScaledDown  70m   
+exit: 0
+```

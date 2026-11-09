@@ -1,0 +1,17 @@
+# smoke-through-tunnel
+recorded: 2026-11-09T10:20:46-07:00  host: aethyr-core  commit: 52804c9
+
+```
+$ demo/smoke.sh
+| check | result | detail
+| --- | --- | ---
+| api /healthz                       | PASS | HTTP 200
+| api /readyz (Elasticsearch)        | PASS | HTTP 200
+| hybrid search returns hits         | PASS | hits=10
+| semantic-only hits present         | PASS | knn-only=2
+| recommend returns session ids      | PASS | ids=1334787,1244695,1362609
+| conflicts computed                 | PASS | conflicts=1 missing=0
+| booths search                      | PASS | n=10 first booth=228
+| mcp initialize through tunnel      | PASS | server info seen=1
+exit: 0
+```

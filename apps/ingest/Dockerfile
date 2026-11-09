@@ -28,5 +28,5 @@ COPY --from=build --chown=10001:10001 /app/.model-cache /app/.model-cache
 ENV MODEL_CACHE_DIR=/app/.model-cache MODEL_OFFLINE=1
 COPY --from=build --chown=10001:10001 /app/apps/ingest/package.json apps/ingest/package.json
 COPY --from=build --chown=10001:10001 /app/apps/ingest/dist apps/ingest/dist
-COPY --chown=10001:10001 fixtures/sched fixtures/sched
+COPY --chown=10001:10001 fixtures fixtures
 ENTRYPOINT ["node", "apps/ingest/dist/main.js"]
