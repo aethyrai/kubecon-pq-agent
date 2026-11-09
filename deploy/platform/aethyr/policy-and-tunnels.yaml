@@ -30,3 +30,14 @@ spec:
   policyRef: { name: hackathon }
   upstreams:
     - { service: mcp-server, port: 80, localPort: 8081 }
+---
+apiVersion: aethyr.io/v1alpha1
+kind: PQTunnel
+metadata:
+  name: identity
+  namespace: aethyr-system
+spec:
+  listener: { port: 7445, protocol: TCP }
+  policyRef: { name: hackathon }
+  upstreams:
+    - { service: identity, port: 80, localPort: 8082 }
