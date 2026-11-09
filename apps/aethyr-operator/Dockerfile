@@ -9,7 +9,7 @@ RUN npm ci --no-audit --no-fund --workspace @kubecon-pq-agent/aethyr-operator --
 COPY packages/otel packages/otel
 COPY packages/schema packages/schema
 COPY apps/aethyr-operator apps/aethyr-operator
-RUN npm run build -w @kubecon-pq-agent/otel && npm run build -w @kubecon-pq-agent/schema && npm run build -w @kubecon-pq-agent/aethyr-operator && npm prune --omit=dev && mkdir -p apps/aethyr-operator/node_modules
+RUN npm run build -w @kubecon-pq-agent/otel && npm run build -w @kubecon-pq-agent/schema && npm run build -w @kubecon-pq-agent/aethyr-operator && npm prune --omit=dev && mkdir -p apps/aethyr-operator/node_modules packages/otel/node_modules
 
 FROM node:22-alpine
 WORKDIR /app
@@ -18,6 +18,7 @@ USER 10001:10001
 COPY --from=build --chown=10001:10001 /app/node_modules node_modules
 COPY --from=build --chown=10001:10001 /app/packages/otel/package.json packages/otel/package.json
 COPY --from=build --chown=10001:10001 /app/packages/otel/dist packages/otel/dist
+COPY --from=build --chown=10001:10001 /app/packages/otel/node_modules packages/otel/node_modules
 COPY --from=build --chown=10001:10001 /app/apps/aethyr-operator/node_modules apps/aethyr-operator/node_modules
 COPY --from=build --chown=10001:10001 /app/packages/schema/package.json packages/schema/package.json
 COPY --from=build --chown=10001:10001 /app/packages/schema/dist packages/schema/dist
