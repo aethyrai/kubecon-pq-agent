@@ -7,7 +7,7 @@
 #
 # The fault lives in each api pod's memory and the Service picks a pod per request, so every
 # command is sent ROUNDS times (default 8) to reach all replicas, and status reports the distinct
-# answers seen. With two replicas the chance one pod misses eight rounds is below 0.5%.
+# answers seen. With two replicas the chance that a pod misses all eight rounds is below 1% (2 × (1/2)^8).
 set -euo pipefail
 API="${API_URL:-http://127.0.0.1:8085}"
 TOKEN=$(tr -d '\n' < "${CHAOS_TOKEN_FILE:-$HOME/.secrets/chaos-token}")
