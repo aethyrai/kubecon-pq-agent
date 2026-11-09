@@ -105,13 +105,14 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
         </section>
       )}
       {mode === 'full' &&
-        days.map((d) => (
+        days.map((d, i) => (
           <Ruler
             key={d}
             sessions={sorted.filter((s) => s.day === d)}
             label={`${dayLabel(d)} at a glance`}
             picked={picked}
             conflicted={bad}
+            showKey={i === 0}
           />
         ))}
       {mode === 'text' && (
