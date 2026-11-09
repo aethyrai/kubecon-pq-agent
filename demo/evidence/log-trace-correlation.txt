@@ -1,0 +1,16 @@
+# log-trace-correlation
+recorded: 2026-11-09T14:41:21-07:00  host: aethyr-core  commit: 813afc7
+deployed: web web:sha-ff350ab
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c curl -s -o /dev/null -w "tunnel /search HTTP %{http_code}\n" "http://127.0.0.1:8085/search?q=post-quantum+tunnels&size=3"; sleep 2; kubectl -n conf logs -l app=api --since=3m --tail=200 | grep -m2 "trace_id"; kubectl -n aethyr-system logs deploy/aethyr-operator --tail=30 | grep -m1 trace_id
+tunnel /search HTTP 200
+{"level":30,"time":1794260373646,"service":"api","trace_id":"39a9bb88bce4f77397b7f0255ee2aceb","span_id":"c10e37023cc70681","q":"argo","filters":{},"hits":1,"msg":"search"}
+{"level":30,"time":1794260373039,"service":"api","trace_id":"d642c4924bded7732878ad6b08818ed6","span_id":"bb67840f2468fa6b","q":"argo","filters":{},"hits":20,"msg":"search"}
+{"level":30,"time":1794260319009,"service":"aethyr-operator","trace_id":"b31b8cb92093c5307fc2c1d8e938e36c","span_id":"e47906e80ba89385","policies":1,"tunnels":3,"peers":2,"msg":"change detected"}
+exit: 0
+```
