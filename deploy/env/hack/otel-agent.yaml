@@ -45,10 +45,12 @@ config:
           conditions:
             - 'resource.attributes["k8s.namespace.name"] == "aethyr-system"'
           statements:
-            - 'set(attributes["kem"], ExtractPatterns(body, "kem_alg=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "kem_alg=")'
-            - 'set(attributes["sig"], ExtractPatterns(body, "sig_alg=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "sig_alg=")'
-            - 'set(attributes["side"], ExtractPatterns(body, "side=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "side=")'
-            - 'set(attributes["peer_did"], ExtractPatterns(body, "peer_did=\\\"?(?P<v>did:[^ \\\"]+)")["v"]) where IsMatch(body, "peer_did=")'
+            # The gateway colours its log with ANSI codes between key, "=", and value, so the patterns
+            # skip anything up to the next quote instead of expecting key="value".
+            - 'set(attributes["kem"], ExtractPatterns(body, "kem_alg[^\\\"]*\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "kem_alg")'
+            - 'set(attributes["sig"], ExtractPatterns(body, "sig_alg[^\\\"]*\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "sig_alg")'
+            - 'set(attributes["side"], ExtractPatterns(body, "side[^\\\"]*\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "handshake completed")'
+            - 'set(attributes["peer_did"], ExtractPatterns(body, "peer_did.*?(?P<v>did:[A-Za-z0-9:_-]+)")["v"]) where IsMatch(body, "peer_did")'
     batch: { timeout: 5s }
     memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
     resource/cluster:
