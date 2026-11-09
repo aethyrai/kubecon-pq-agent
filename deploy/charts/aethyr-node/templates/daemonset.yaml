@@ -55,13 +55,13 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: [ALL] }
+          # A TCP probe opens and drops a TLS socket, which the tunnel logs as a WARN. One liveness
+          # probe a minute keeps the restart safety net and keeps the Dash0 log stream readable.
           livenessProbe:
             tcpSocket: { port: {{ .port }} }
             initialDelaySeconds: 3
-            periodSeconds: 10
-          readinessProbe:
-            tcpSocket: { port: {{ .port }} }
-            periodSeconds: 5
+            periodSeconds: 60
+            failureThreshold: 3
           volumeMounts:
             - { name: config, mountPath: /etc/aethyr, readOnly: true }
             - { name: tls, mountPath: /etc/aethyr/tls, readOnly: true }
