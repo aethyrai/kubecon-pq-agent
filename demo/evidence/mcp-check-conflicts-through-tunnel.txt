@@ -1,0 +1,8 @@
+# mcp-check-conflicts-through-tunnel
+recorded: 2026-11-09T10:38:44-07:00  host: aethyr-core  commit: b04ac5f
+
+```
+$ sh -c IDS=$(curl -s -m 30 -X POST http://127.0.0.1:8081/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"recommend","arguments":{"interests":"agent security","day":"2026-11-10","size":4}}}' | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps(json.loads(d["result"]["content"][0]["text"])["session_ids"]))'); curl -s -m 30 -X POST http://127.0.0.1:8081/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"check_conflicts\",\"arguments\":{\"session_ids\":$IDS}}}" | python3 -c 'import json,sys; d=json.load(sys.stdin); t=json.loads(d["result"]["content"][0]["text"]); print("conflicts:", t["conflicts"])'
+conflicts: [{'a': '1244695', 'b': '1247753', 'overlapMinutes': 30}, {'a': '1244695', 'b': '1362609', 'overlapMinutes': 5}, {'a': '1247753', 'b': '1362609', 'overlapMinutes': 5}]
+exit: 0
+```

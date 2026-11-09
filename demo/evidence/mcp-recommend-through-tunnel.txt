@@ -1,0 +1,17 @@
+# mcp-recommend-through-tunnel
+recorded: 2026-11-09T10:38:44-07:00  host: aethyr-core  commit: b04ac5f
+
+```
+$ sh -c curl -s -m 30 -X POST http://127.0.0.1:8081/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"recommend","arguments":{"interests":"agent security and supply chain","day":"2026-11-10","size":3}}}' | python3 -c 'import json,sys; d=json.load(sys.stdin); t=json.loads(d["result"]["content"][0]["text"]); print("session_ids:", t["session_ids"]); [print("-", s["start"][11:16], s["title"][:70], "|", s["room"][:40]) for s in t["sessions"]]'
+session_ids: ['1334787', '1244695', '1362609']
+- 12:02 Supply Chain, Runtime and SDLC: A Cloud Native Security Overview | Salt Palace | Level 1 | Solutions Showca
+- 17:30 When the Agent Lost Its Patience: Securing Cloud-Native AI Workflows A | Salt Palace | Level 1 | Grand Ballroom H
+- 17:55 Demo Theater: Beyond the Agent Trace: Understand and Trust AI Agents A | Salt Palace | Level 1 | Solutions Showca
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-mcp-server match='handshake completed'
+```
+2026-11-09T17:35:41.206427Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T17:38:44.599584Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+```
