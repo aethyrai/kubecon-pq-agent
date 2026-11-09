@@ -1,0 +1,4 @@
+image:
+  tag: latest
+dash0:
+  endpoint: https://ingress.us-west-2.aws.dash0.com
