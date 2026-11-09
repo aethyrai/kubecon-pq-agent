@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { formatTime } from './api.ts';
-import { conflictedIds, dropSuggestions, parseIds, toggleId } from './plan.ts';
+import { conflictedIds, dropFor, dropSuggestions, parseIds, toggleId } from './plan.ts';
 
 test('parseIds trims, splits, and de-duplicates', () => {
   assert.deepEqual(parseIds(' a, b ,a,,c'), ['a', 'b', 'c']);
@@ -54,5 +54,30 @@ test('dropSuggestions drops an id the plan does not know, and falls back to plan
   assert.deepEqual(
     [...dropSuggestions([{ a: 'zz', b: 'a', overlapMinutes: 10 }], same, ['a'])],
     ['zz'],
+  );
+});
+
+test('dropFor picks per pair, so a chain does not drag another pair into a wrong choice', () => {
+  // A-B: drop B (lower score). B-C: C scores lower than B, so the pair drops C, not B.
+  const sessions = [
+    { id: 'a', start: '2026-11-10T11:00:00', score: 0.9 },
+    { id: 'b', start: '2026-11-10T11:10:00', score: 0.5 },
+    { id: 'c', start: '2026-11-10T11:35:00', score: 0.4 },
+  ];
+  const ids = ['a', 'b', 'c'];
+  assert.equal(dropFor({ a: 'a', b: 'b', overlapMinutes: 30 }, sessions, ids), 'b');
+  assert.equal(dropFor({ a: 'b', b: 'c', overlapMinutes: 5 }, sessions, ids), 'c');
+  assert.deepEqual(
+    [
+      ...dropSuggestions(
+        [
+          { a: 'a', b: 'b', overlapMinutes: 30 },
+          { a: 'b', b: 'c', overlapMinutes: 5 },
+        ],
+        sessions,
+        ids,
+      ),
+    ],
+    ['b', 'c'],
   );
 });
