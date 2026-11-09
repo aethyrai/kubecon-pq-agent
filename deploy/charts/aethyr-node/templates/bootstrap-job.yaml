@@ -51,9 +51,8 @@ spec:
     spec:
       restartPolicy: Never
       serviceAccountName: aethyr-bootstrap
+      # One-shot key generation. Runs as root only to apk-add openssl and curl; aethyr-system is PSA privileged.
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: bootstrap
@@ -61,7 +60,7 @@ spec:
           command: ["sh", "-ec"]
           args:
             - |
-              apk add --no-cache curl >/dev/null
+              apk add --no-cache openssl curl >/dev/null
               K=https://kubernetes.default.svc; T=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
               CA=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt; NS={{ .Release.Namespace }}
               have() { curl -sf --cacert $CA -H "Authorization: Bearer $T" $K/api/v1/namespaces/$NS/secrets/$1 >/dev/null; }
@@ -88,6 +87,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ALL] }
+            runAsUser: 0
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { cpu: 500m, memory: 128Mi }

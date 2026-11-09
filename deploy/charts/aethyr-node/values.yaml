@@ -16,6 +16,6 @@ resources:
   requests: { cpu: 100m, memory: 128Mi }
   limits: { cpu: 500m, memory: 256Mi }
 bootstrap:
-  image: alpine/openssl:3.5.1
+  image: alpine:3.22
   caDays: 30
   serverSans: "DNS:api.kube.aethyr.cloud,DNS:gateway.aethyr-system.svc,IP:34.22.42.147"
