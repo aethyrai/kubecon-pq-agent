@@ -1,0 +1,19 @@
+# web-public-now
+recorded: 2026-11-09T15:56:37-07:00  host: aethyr-core  commit: f23c266
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504298
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ python3 -I /tmp/claude-1000/-home-thehermetist-Desktop-aethyr-console/b71fdd76-c9bd-45d8-9a44-68f132ef6bb8/scratchpad/now-evidence.py
+GET /now HTTP 200
+h1: ['Where to be now']
+h2: []
+role=alert present: False
+main text (first 600 chars):  Where to be now Nothing picked yet. Open Tuesday and add talks, or search for a topic . Then this page tells you where to go next. 
+primary nav: [('Now', '/now'), ('Search', '/'), ('Schedule', '/schedule/2026-11-10'), ('My plan', '/plan'), ('Booths', '/booths'), ('Side events', '/side-events'), ('Booths', '/booths'), ('Side events', '/side-events')]
+GET /about HTTP 200 | Dash0 section: True | credit: True
+exit: 0
+```
