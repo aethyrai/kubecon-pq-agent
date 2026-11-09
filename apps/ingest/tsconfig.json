@@ -3,12 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-<<<<<<< HEAD
     "types": ["node"],
     "composite": true
-=======
-    "types": ["node"]
->>>>>>> origin/main
   },
   "include": ["src"],
   "references": [
