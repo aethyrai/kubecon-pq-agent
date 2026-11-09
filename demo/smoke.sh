@@ -14,6 +14,6 @@ rec=$(j -X POST -H 'content-type: application/json' -d '{"interests":"agent secu
 row "recommend returns session ids" "$([ -n "$rec" ] && echo PASS || echo FAIL)" "ids=$rec"
 if [ -n "$rec" ]; then c=$(j "$API/plan/conflicts?ids=$rec" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(len(d["conflicts"]), len(d["missing"]))' 2>/dev/null || echo "x x"); set -- $c; row "conflicts computed" "$([ "${2:-x}" = 0 ] && echo PASS || echo FAIL)" "conflicts=${1:-?} missing=${2:-?}"; fi
 b=$(j "$API/booths?q=observability" | python3 -c 'import json,sys;d=json.load(sys.stdin);e=d["exhibitors"];print(len(e), (e[0]["booth"] if e else ""))' 2>/dev/null || echo "0"); set -- $b; row "booths search" "$([ "${1:-0}" -gt 0 ] && echo PASS || echo FAIL)" "n=${1:-0} first booth=${2:-}"
-m=$(j -X POST "$MCP" -H 'content-type: application/json' -H 'accept: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' | grep -c kubecon-pq-agent || true)
+m=$(j -X POST "$MCP" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' | grep -c kubecon-pq-agent || true)
 row "mcp initialize through tunnel" "$([ "${m:-0}" -gt 0 ] && echo PASS || echo FAIL)" "server info seen=$m"
 exit $fail
