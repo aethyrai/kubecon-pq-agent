@@ -19,7 +19,7 @@ spec:
       steps:
         {{- range $i, $w := .Values.canary.steps }}
         - setWeight: {{ $w }}
-        {{- if lt $w 100 }}
+        {{- if lt (int $w) 100 }}
         - pause: { duration: {{ $.Values.canary.pauseSeconds }}s }
         {{- end }}
         {{- end }}
