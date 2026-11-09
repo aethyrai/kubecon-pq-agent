@@ -1,40 +1,146 @@
 /** Server-side calls to the conference api. In-cluster: http://api.conf.svc; through the tunnel: 127.0.0.1:8080. */
 export const API_URL = process.env.API_URL ?? 'http://127.0.0.1:8080';
 
-export interface SessionHit {
+export interface SessionCard {
   id: string;
   title: string;
+  speakers: string[];
   track: string;
+  level: string;
   day: string;
   start: string;
   end: string;
   room: string;
+  venue: string;
+  colocated_event: string;
+  tags: string[];
   captioned: boolean;
+  recorded: boolean;
+  url: string;
+  score?: number;
+  legs?: Array<'bm25' | 'knn'>;
 }
 export interface SearchResponse {
   query: string;
-  hits: SessionHit[];
   total: number;
-  stub?: boolean;
+  hits: SessionCard[];
+}
+export interface ScheduleResponse {
+  day: string;
+  total: number;
+  sessions: SessionCard[];
+}
+export interface Conflict {
+  a: string;
+  b: string;
+  overlapMinutes: number;
+}
+export interface ConflictsResponse {
+  ids: string[];
+  missing: string[];
+  conflicts: Conflict[];
+  sessions: SessionCard[];
+}
+export interface Exhibitor {
+  id: string;
+  name: string;
+  booth: string;
+  tier: string;
+  description: string;
+  categories: string[];
+  url: string;
+}
+export interface SideEvent {
+  id: string;
+  name: string;
+  host: string;
+  start: string;
+  end: string;
+  address: string;
+  rsvp_url: string;
+  capacity_note: string;
+  description: string;
+  badge_required: boolean;
+}
+export interface RoomAccess {
+  room: { id: string; venue: string; level: string; name: string };
+  facts: string[];
 }
 
-function isSearchResponse(v: unknown): v is SearchResponse {
-  return typeof v === 'object' && v !== null && Array.isArray((v as SearchResponse).hits);
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
 }
-
-export async function search(q: string): Promise<SearchResponse> {
-  const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`api /search: HTTP ${res.status}`);
+async function getJson<T>(path: string, guard: (v: unknown) => v is T): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error(`api ${path}: HTTP ${res.status}`);
   const body: unknown = await res.json();
-  if (!isSearchResponse(body)) throw new Error('api /search: unexpected shape');
+  if (!guard(body)) throw new Error(`api ${path}: unexpected shape`);
   return body;
 }
 
+export const search = (q: string, mode: string): Promise<SearchResponse> =>
+  getJson(
+    `/search?q=${encodeURIComponent(q)}&size=${mode === 'text' ? 10 : 20}`,
+    (v): v is SearchResponse => isObject(v) && Array.isArray(v.hits),
+  );
+export const schedule = (
+  day: string,
+  filters: Record<string, string | undefined>,
+): Promise<ScheduleResponse> => {
+  const qs = Object.entries(filters)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v ?? '')}`)
+    .join('&');
+  return getJson(
+    `/schedule/${day}${qs ? `?${qs}` : ''}`,
+    (v): v is ScheduleResponse => isObject(v) && Array.isArray(v.sessions),
+  );
+};
+export const planConflicts = (ids: string[]): Promise<ConflictsResponse> =>
+  getJson(
+    `/plan/conflicts?ids=${encodeURIComponent(ids.join(','))}`,
+    (v): v is ConflictsResponse => isObject(v) && Array.isArray(v.conflicts),
+  );
+export const booths = (q: string): Promise<{ exhibitors: Exhibitor[] }> =>
+  getJson(
+    `/booths?q=${encodeURIComponent(q)}&size=30`,
+    (v): v is { exhibitors: Exhibitor[] } => isObject(v) && Array.isArray(v.exhibitors),
+  );
+export const sideEvents = (day?: string): Promise<{ events: SideEvent[] }> =>
+  getJson(
+    `/side-events${day ? `?day=${day}` : ''}`,
+    (v): v is { events: SideEvent[] } => isObject(v) && Array.isArray(v.events),
+  );
+export const roomAccess = (id: string): Promise<RoomAccess | undefined> =>
+  getJson(
+    `/rooms/${encodeURIComponent(id)}/access`,
+    (v): v is RoomAccess => isObject(v) && Array.isArray(v.facts),
+  ).catch((e: unknown) => {
+    if (e instanceof Error && /HTTP 404/.test(e.message)) return undefined;
+    throw e;
+  });
+
+export const DAYS: Array<{ day: string; label: string }> = [
+  { day: '2026-11-09', label: 'Monday' },
+  { day: '2026-11-10', label: 'Tuesday' },
+  { day: '2026-11-11', label: 'Wednesday' },
+  { day: '2026-11-12', label: 'Thursday' },
+];
+
 export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', {
+  return new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     timeZone: 'America/Denver',
   });
+}
+export function timeRange(s: { start: string; end: string }): string {
+  return `${formatTime(s.start)} to ${formatTime(s.end)}`;
+}
+/** Room ids are not in session cards; the room panel is reached by room name through the schedule's rooms index. */
+export function roomSlug(room: string): string {
+  return encodeURIComponent(room);
 }

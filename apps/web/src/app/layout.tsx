@@ -18,8 +18,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <header>
           <nav aria-label="Primary">
-            <a href="/">Search</a> <a href="/schedule/2026-11-10">Tuesday</a>{' '}
-            <a href="/schedule/2026-11-11">Wednesday</a> <a href="/schedule/2026-11-12">Thursday</a>{' '}
+            <a href="/">Search</a> <a href="/schedule/2026-11-10">Schedule</a>{' '}
+            <a href="/plan">My plan</a> <a href="/booths">Booths</a>{' '}
+            <a href="/side-events">Side events</a> <a href="/?mode=full">Full</a>{' '}
             <a href="/?mode=text">Text mode</a> <a href="/?mode=reader">Screen reader mode</a>
           </nav>
         </header>
