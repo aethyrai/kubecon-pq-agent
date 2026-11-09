@@ -1,0 +1,69 @@
+# Hello-world Ingress with TLS: proves DNS, Traefik, and cert-manager end to end (SOP 4.3).
+# Replaced by the web chart on Sunday.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+  namespace: conf
+  labels: { app: hello }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: hello }
+  template:
+    metadata:
+      labels: { app: hello }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: hello
+          image: ghcr.io/traefik/whoami:v1.11.0
+          args: ["--port=8080", "--name=kubecon-pq-agent"]
+          ports: [{ containerPort: 8080, name: http }]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+  namespace: conf
+spec:
+  selector: { app: hello }
+  ports: [{ port: 80, targetPort: http, name: http }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+  namespace: conf
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [app.kube.aethyr.cloud]
+      secretName: app-kube-aethyr-cloud-tls
+  rules:
+    - host: app.kube.aethyr.cloud
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello
+                port: { name: http }
