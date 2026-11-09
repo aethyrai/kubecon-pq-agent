@@ -1,5 +1,5 @@
 image:
-  tag: latest
+  tag: sha-0722e21
 hpa:
   enabled: true
   min: 2
