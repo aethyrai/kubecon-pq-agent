@@ -1,0 +1,29 @@
+# bad-canary-recovery-1600
+recorded: 2026-11-09T16:17:53-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504298
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl -n argocd get application mcp-server -o jsonpath="argo: sync={.status.sync.status} health={.status.health.status} op={.status.operationState.phase}{\"\n\"}"; kubectl -n conf get rollout mcp-server -o custom-columns="NAME:.metadata.name,PHASE:.status.phase,STEP:.status.currentStepIndex,IMAGE:.spec.template.spec.containers[0].image"; echo; kubectl -n conf get pods -l app=mcp-server -o custom-columns="NAME:.metadata.name,IMG:.spec.containers[0].image,READY:.status.containerStatuses[0].ready"; echo; kubectl -n conf get jobs -l app=mcp-server-deploy-event -o custom-columns="NAME:.metadata.name,CREATED:.metadata.creationTimestamp,SUCCEEDED:.status.succeeded"; for j in failed succeeded; do kubectl -n conf logs job/mcp-server-deploy-event-$j | tail -1; done; echo; curl -s -o /dev/null -w "mcp through tunnel: HTTP %{http_code}\n" -m 10 -X POST http://127.0.0.1:8081/mcp -H "content-type: application/json" -H "accept: application/json, text/event-stream" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"; echo; echo "note: the Argo sync for the bad tag hung at PostSync waiting for a Rollout that could never become healthy; terminating that operation (argocd app terminate-op, or a Rollout abort) let the revert sync run."
+argo: sync=Synced health=Healthy op=Succeeded
+NAME         PHASE     STEP   IMAGE
+mcp-server   Healthy   5      ghcr.io/aethyrai/kubecon-pq-agent/mcp-server:sha-a504298
+
+NAME                          IMG                                                        READY
+mcp-server-6ccddf45cf-dkgvl   ghcr.io/aethyrai/kubecon-pq-agent/mcp-server:sha-a504298   true
+mcp-server-6ccddf45cf-lq8lf   ghcr.io/aethyrai/kubecon-pq-agent/mcp-server:sha-a504298   true
+
+NAME                                CREATED                SUCCEEDED
+mcp-server-deploy-event-failed      2026-11-09T23:16:52Z   1
+mcp-server-deploy-event-succeeded   2026-11-09T23:16:59Z   1
+dash0.deployment mcp-server sha-a504289 failed -> HTTP 200 {"partialSuccess":{}}
+dash0.deployment mcp-server sha-a504298 succeeded -> HTTP 200 {"partialSuccess":{}}
+
+mcp through tunnel: HTTP 200
+
+note: the Argo sync for the bad tag hung at PostSync waiting for a Rollout that could never become healthy; terminating that operation (argocd app terminate-op, or a Rollout abort) let the revert sync run.
+exit: 0
+```

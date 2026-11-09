@@ -8,7 +8,7 @@ Built with Gitar, Dash0, Radar, Elasticsearch, and OpenTelemetry.
 
 ## What it is
 
-One Kubernetes cluster runs the whole product: Elasticsearch holds seven indices built from the public KubeCon schedule, sponsor directory, and co-located event pages; `api` answers hybrid search (BM25 + local vector search fused with reciprocal rank fusion), recommendations, day schedules, conflict checks, next-move guidance, logistics, booths, side events, and room accessibility; `mcp-server` exposes the same as ten MCP tools, a schedule resource, and a "plan my day" prompt; `web` is a Next.js client with full, text, and screen-reader modes. Walk times are estimates from venue and level, because the schedule publishes no distances. The plan stays in the page address, so the server stores no attendee plan. Embeddings run on the CPU inside the cluster, so no attendee query leaves it.
+One Kubernetes cluster runs the whole product: Elasticsearch holds six live indices built from the public KubeCon schedule, sponsor directory, and co-located event pages. A seventh, `logistics`, fills on the next ingest run once the search key covers it. `api` answers hybrid search (BM25 + local vector search fused with reciprocal rank fusion), recommendations, day schedules, conflict checks, next-move guidance, booths, side events, and room accessibility; `mcp-server` exposes the same as ten MCP tools (the `logistics` tool waits for the same key change), a schedule resource, and a "plan my day" prompt; `web` is a Next.js client with full, text, and screen-reader modes. Walk times are estimates from venue and level, because the schedule publishes no distances. The plan stays in the page address, so the server stores no attendee plan. Embeddings run on the CPU inside the cluster, so no attendee query leaves it.
 
 The Aethyr layer wraps it: a `CryptoPolicy` cluster resource declares the key exchange (ML-KEM-768 or ML-KEM-1024) and signature level, `PQTunnel` resources declare which services are reachable through the post-quantum tunnel, and `PQPeer` resources are attendees. `aethyr-operator` renders those into gateway config and hot-reloads the gateway DaemonSet; `identity` admits peers and issues short-lived tokens. After the first scaffold commit, every change is a pull request reviewed by Gitar, built by GitHub Actions, deployed by Argo CD, canaried by Argo Rollouts, watched by Radar, and traced end to end in Dash0.
 
@@ -57,7 +57,7 @@ Product (pull requests 16 to 35):
 - #28/#31 Argo never re-applies the CryptoPolicy spec, so a merge during the demo cannot undo the rotation.
 - #32 Web design pass: two-venue day ruler, hyperlegible type, token palette with dark mode, nav that keeps mode and picks.
 
-Afternoon (pull requests 36 to 73):
+Afternoon (pull requests 36 to 83):
 
 - #44, #46, #47 Signed post-quantum trail: ML-DSA-65 hash-chained records kept by identity in segmented Secrets, `/trail` and `/trail/key`, the web `/trail` page, and the offline verifier `demo/verify-trail.mjs`.
 - #45 Identity rolls with Recreate so the trail has one writer.
@@ -70,6 +70,10 @@ Afternoon (pull requests 36 to 73):
 - #51, #52, #65, #67, #69 Web: credits, the `/about` section "What you see in Dash0", hybrid wording.
 - #66 Run of show; #71 README claims checked against the repository history.
 - #55 stays open on purpose: the planted CI break that Gitar diagnosed and fixed with its own commit.
+- #76, #80 Next move: `/plan/next` and `/logistics` routes, `whats_next` and `logistics` MCP tools, the `/now` page. Rolled at 15:57; the logistics index waits for the key change above.
+- #77 The one high finding in Radar's cluster audit, the OpenTelemetry agent allowing privilege escalation, fixed in chart values and rolled.
+- #74, #79, #81 README, run of show, web and trail evidence, submission text.
+- #82, #83 The planted bad canary: a transposed image tag merged, the canary pod never pulled, the Rollout held at step 0 while the stable pods served, Radar diagnosed it, the revert restored the tag. Lesson recorded under Operating notes.
 
 ## Tracks
 
@@ -77,12 +81,12 @@ Evidence files live in `demo/evidence/`. One file per judging line:
 
 | Track | What the judge sees | Evidence |
 | --- | --- | --- |
-| Gitar: Never Merge Broken | Features land through reviewed PRs. [PR 55](https://github.com/aethyrai/kubecon-pq-agent/pull/55) has a deliberately planted type error: CI failed, Gitar diagnosed the error and committed the fix, and CI passed | `gitar-ci-fix.txt`, `gitar-diagnosis.png`, `gitar-autofix-commit.png`, `CHANGES.md` |
-| Dash0: Stop Flying Blind | One trace from the tunnel through web and api to Elasticsearch, with the `search.leg.bm25` and `search.leg.knn` spans inside `search.hybrid`; every request log line carries its trace id; a deployment marker per roll; Agent0 names the slow Elasticsearch span after a planted fault | `otel-collector-span-export.txt`, `log-trace-correlation.txt`, `dash0-deployment-markers.txt`, `chaos-es-latency-fault.txt`, `dash0-e2e-trace.png`, `agent0-es-latency.png`, `dash0-kem-flip.png` |
-| Radar: AI SRE | Radar explains a pod that we deliberately killed, promotes a canary from the coding agent, audits the cluster before and after | `radar-pod-kill-rca.png`, `claude-radar-promote.png`, `radar-audit-before.png`, `radar-audit-after-monday.png` |
-| Elasticsearch: Find the Right Talk | Hybrid search finds what keyword search misses; Elasticsearch is the only datastore | `smoke-through-tunnel.txt` (semantic-only hits counted), `kubectl get pods -n elastic` |
-| Merge Forward | Screen-reader mode reading a room panel; every control labelled | `web-screenreader-room.png` |
-| Best overall | Live `CryptoPolicy` rotation from ML-KEM-768 to ML-KEM-1024 with the Dash0 label flipping | `cryptopolicy-rotation-ml-kem-1024.txt`, `cryptopolicy-rotation-back-to-768.txt`, `pq-trail-rotation.txt`, `kubectl-aethyr-crds.png`, `dash0-kem-1024.png` |
+| Gitar: Never Merge Broken | Features land through reviewed PRs. [PR 55](https://github.com/aethyrai/kubecon-pq-agent/pull/55) has a deliberately planted type error: CI failed, Gitar diagnosed the error and committed the fix, and CI passed | `gitar-ci-fix.txt`, `CHANGES.md`; the PR itself, shown live on stage |
+| Dash0: Stop Flying Blind | One trace from the tunnel through web and api to Elasticsearch, with the `search.leg.bm25` and `search.leg.knn` spans inside `search.hybrid`; every request log line carries its trace id; a deployment marker per roll; Agent0 names the slow Elasticsearch span after a planted fault | `otel-collector-span-export.txt`, `log-trace-correlation.txt`, `dash0-deployment-markers.txt`, `dash0-deployment-marker-web-after-fix.txt`, `chaos-es-latency-fault-1600.txt`; the Dash0 trace, markers and Agent0 answer, shown live on stage |
+| Radar: AI SRE | Radar explains a pod that we deliberately killed and diagnoses a canary that never became ready; it audits the cluster before and after the one high finding was fixed | `kill-api-pod-1600.txt`, `bad-canary-mcp-server-1600.txt`, `bad-canary-recovery-1600.txt`, `radar-audit-before.png`; the Radar incident, diagnose and after-audit, shown live on stage |
+| Elasticsearch: Find the Right Talk | Hybrid search finds what keyword search misses; Elasticsearch is the only datastore | `smoke-through-tunnel.txt` (semantic-only hits counted), `web-public-search.txt`, `kubectl get pods -n elastic`; the search, shown live on stage |
+| Merge Forward | Screen-reader mode reading a room panel; every control labelled | `web-reader-room-82949.txt`; the reader-mode page, shown live on stage |
+| Best overall | Live `CryptoPolicy` rotation from ML-KEM-768 to ML-KEM-1024 and back, each rotation signed into the post-quantum trail, with the Dash0 handshake label flipping | `cryptopolicy-rotation-ml-kem-1024-1600.txt`, `cryptopolicy-rotation-back-to-768-1600.txt`, `pq-trail-rotation-1600.txt`, `pq-trail-public.txt`, `kubectl-aethyr-crds.txt`, `operator-change-log.txt`, `network-policies.txt`; the Dash0 handshake chart, shown live on stage |
 
 ## Run it
 
@@ -104,3 +108,13 @@ curl http://127.0.0.1:8085/search?q=agents+that+fix+clusters
 ```
 
 Register the MCP server in a client: Streamable HTTP at `http://127.0.0.1:8081/mcp`.
+
+### Operating notes
+
+Things the next operator trips on, learned by running it today:
+
+- A sync for a Rollout that can never become healthy hangs Argo CD at PostSync ("waiting for healthy state"), and Argo starts no new sync while one runs, so a revert does not apply. Terminate the operation (`argocd app terminate-op <app>`, or patch `status.operationState.phase` to `Terminating`) or abort the Rollout; the revert then syncs.
+- Seal secrets from a value with no trailing newline (`tr -d '\n' | kubeseal --raw ...`). Two tokens today failed on a 0x0a byte.
+- The chaos faults live in each api pod's memory. `demo/chaos/es-latency.sh` sends every command to all replicas and `status` shows whether they agree.
+- When a workspace package gains dependencies, check the lockfile for `packages/<name>/node_modules/` entries: the runtime images copy only what the Dockerfiles name.
+- `helm template` without `-n` renders `Release.Namespace` as `default`; hook Jobs rendered that way land in the wrong namespace.

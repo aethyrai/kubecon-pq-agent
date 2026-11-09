@@ -1,0 +1,14 @@
+# pq-trail-rotation-1600
+recorded: 2026-11-09T16:00:25-07:00  host: aethyr-core  commit: 35a98fd
+
+```
+$ sh -c curl -s http://127.0.0.1:8082/trail/key | cut -c1-160; echo; curl -s http://127.0.0.1:8082/trail | python3 -c "import json,sys; d=json.load(sys.stdin); print(\"total\", d[\"total\"], \"head\", d[\"head\"][:16], \"verification\", d[\"verification\"]); [print(\" \", json.dumps({k:v for k,v in r.items() if k not in (\"sig\",\"prev\",\"hash\",\"publicKey\")})[:300]) for r in d[\"records\"]]"
+{"algorithm":"ML-DSA-65","publicKey":"Mw4jfs53CxUKC2bNAvj5VgKTMBMd5hpMZhsFm0Z1kUoZnEbZuCFOHbruMFw+ltUbIJ/xUJobx9sg2wK5J/tgWl32KIke/rYosMeadg7yYH2mtL9eGyHW5FFeY8
+
+total 4 head 51cf5d48320834ee verification {'ok': True, 'count': 4}
+  {"seq": 1, "at": "2026-11-09T19:23:04.792Z", "kind": "policy.observed", "data": {"policy": "hackathon", "kem": "ML-KEM-768", "signature": "ML-DSA-65"}, "alg": "ML-DSA-65"}
+  {"seq": 2, "at": "2026-11-09T19:23:45.206Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-768", "toKem": "ML-KEM-1024", "fromSignature": "ML-DSA-65", "toSignature": "ML-DSA-87"}, "alg": "ML-DSA-65"}
+  {"seq": 3, "at": "2026-11-09T19:26:35.226Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-1024", "toKem": "ML-KEM-768", "fromSignature": "ML-DSA-87", "toSignature": "ML-DSA-65"}, "alg": "ML-DSA-65"}
+  {"seq": 4, "at": "2026-11-09T22:58:17.532Z", "kind": "policy.rotated", "data": {"policy": "hackathon", "fromKem": "ML-KEM-768", "toKem": "ML-KEM-1024", "fromSignature": "ML-DSA-65", "toSignature": "ML-DSA-87"}, "alg": "ML-DSA-65"}
+exit: 0
+```

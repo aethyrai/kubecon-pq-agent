@@ -1,0 +1,35 @@
+# cryptopolicy-rotation-back-to-768-1600
+recorded: 2026-11-09T16:25:43-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504298
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl get cryptopolicy hackathon; echo; kubectl -n aethyr-system get events --sort-by=.lastTimestamp | grep -E "GatewayConfigRendered|CryptoPolicyApplied" | tail -3; echo; curl -s -w "\nidentity through tunnel: HTTP %{http_code}\n" http://127.0.0.1:8082/healthz; curl -s -o /dev/null -w "api through tunnel: HTTP %{http_code}\n" "http://127.0.0.1:8085/search?q=argo&size=1"; echo; echo "laptop client handshakes after the revert:"; sed "s/\x1b\[[0-9;]*m//g" /home/thehermetist/.claude/jobs/675bd0a9/tmp/tunnel-client.log | grep -o "sig_alg=\"[^\"]*\" kem_alg=\"[^\"]*\"" | sort | uniq -c; echo; curl -s http://127.0.0.1:8082/trail | python3 -c "import json,sys; d=json.load(sys.stdin); print(\"trail total\", d[\"total\"], \"verification\", d[\"verification\"]); r=d[\"records\"][-1]; print(\" last:\", r[\"seq\"], r[\"kind\"], r[\"at\"], json.dumps(r[\"data\"]))"
+NAME        KEM          SIGNATURE   HYBRID   PROFILE     SESSIONS   READY   AGE
+hackathon   ML-KEM-768   ML-DSA-65   X25519   hackathon              True    7h7m
+
+27m         Normal   GatewayConfigRendered   configmap/aethyr-gateway-config   config 3b9d9591a17cbe4f: hackathon: ML-KEM-1024/ML-DSA-87; 3 tunnel(s), 2 admitted peer(s); gateway rolled
+69s         Normal   CryptoPolicyApplied     configmap/aethyr-gateway-config   hackathon generation 11: ML-KEM-768 / ML-DSA-65 (hackathon)
+69s         Normal   GatewayConfigRendered   configmap/aethyr-gateway-config   config 024e2cf76ba40df5: hackathon: ML-KEM-768/ML-DSA-65; 3 tunnel(s), 2 admitted peer(s); gateway rolled
+
+{"status":"ok"}
+identity through tunnel: HTTP 200
+api through tunnel: HTTP 200
+
+laptop client handshakes after the revert:
+      4 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768"
+
+trail total 5 verification {'ok': True, 'count': 5}
+ last: 5 policy.rotated 2026-11-09T23:24:32.590Z {"policy": "hackathon", "fromKem": "ML-KEM-1024", "toKem": "ML-KEM-768", "fromSignature": "ML-DSA-87", "toSignature": "ML-DSA-65"}
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-identity match='handshake completed'
+```
+2026-11-09T23:25:32.685776Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T23:25:44.089899Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T23:25:44.166472Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+```
