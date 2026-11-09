@@ -12,6 +12,12 @@ DIR="$(cd "$(dirname "$0")" && pwd)"; OUT="$DIR/$NAME.txt"
 {
   echo "# $NAME"
   echo "recorded: $(date -Iseconds)  host: $(hostname)  commit: $(git -C "$DIR" rev-parse --short HEAD 2>/dev/null)"
+  # The deployed images are what a judge should match against, not the local branch.
+  for d in "conf deploy/web" "conf rollout/api" "conf rollout/mcp-server" "aethyr-system deploy/identity" "aethyr-system deploy/aethyr-operator"; do
+    ns=${d% *}; obj=${d#* }
+    img=$(kubectl -n "$ns" get "$obj" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+    [ -n "$img" ] && echo "deployed: ${obj#*/} ${img##*/}"
+  done
   echo
   echo '```'
   echo "\$ $*"

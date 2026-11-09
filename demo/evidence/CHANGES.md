@@ -32,3 +32,9 @@
 | [#32](https://github.com/aethyrai/kubecon-pq-agent/pull/32) | 11:01 | web: design pass with a two-venue day ruler, hyperlegible type, and styled modes | pass |
 | [#33](https://github.com/aethyrai/kubecon-pq-agent/pull/33) | 11:01 | Laptop client follows the live CryptoPolicy; rotation evidence | pass |
 | [#35](https://github.com/aethyrai/kubecon-pq-agent/pull/35) | 11:08 | Deploy web sha-4e8f5b7 (design pass, product pages) | pass |
+
+## Operating notes learned today
+
+- Switching a live Deployment to `strategy: Recreate` fails Argo's server-side apply with "rollingUpdate: Forbidden" while the old `rollingUpdate` block is still on the object. Remove it first: `kubectl patch deploy <name> --type json -p '[{"op":"remove","path":"/spec/strategy/rollingUpdate"}]'`, then hard-refresh the Application.
+- Argo automated sync re-applies manifests on every new revision of main. Anything a demo edits live (the CryptoPolicy spec) must be under `ignoreDifferences` with `RespectIgnoreDifferences=true`, or a merge mid-demo undoes it.
+- The presented tunnel DID depends on both the signature level and the transport, so a client that follows the CryptoPolicy registers one PQPeer per level it may present.

@@ -19,8 +19,8 @@ rules:
   - apiGroups: [""]
     resources: [secrets]
     verbs: [get, create, update]
-    # The signed trail is segmented across aethyr-trail-00001.. (200 records each); RBAC takes no
-    # prefix, so the first 50 segment names (10,000 records) are enumerated here.
+    # The signed trail is segmented across aethyr-trail-00001.. (150 records each); RBAC takes no
+    # prefix, so the first 50 segment names (7,500 records) are enumerated here.
     resourceNames:
       - aethyr-peer-tokens
       - aethyr-trail
