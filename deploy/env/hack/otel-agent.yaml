@@ -22,7 +22,33 @@ config:
     jaeger: null
     zipkin: null
     prometheus: null
+  connectors:
+    count:
+      logs:
+        aethyr.tunnel.handshakes:
+          description: AWP tunnel handshakes completed, by negotiated algorithms
+          conditions:
+            - 'IsMatch(body, "AWP handshake completed")'
+          attributes:
+            - { key: kem }
+            - { key: sig }
+            - { key: side }
+        aethyr.tunnel.sessions.established:
+          description: AWP tunnel sessions established on the gateway
+          conditions:
+            - 'IsMatch(body, "tunnel session established")'
   processors:
+    transform/aethyr:
+      error_mode: ignore
+      log_statements:
+        - context: log
+          conditions:
+            - 'resource.attributes["k8s.namespace.name"] == "aethyr-system"'
+          statements:
+            - 'set(attributes["kem"], ExtractPatterns(body, "kem_alg=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "kem_alg=")'
+            - 'set(attributes["sig"], ExtractPatterns(body, "sig_alg=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "sig_alg=")'
+            - 'set(attributes["side"], ExtractPatterns(body, "side=\\\"(?P<v>[^\\\"]+)\\\"")["v"]) where IsMatch(body, "side=")'
+            - 'set(attributes["peer_did"], ExtractPatterns(body, "peer_did=\\\"?(?P<v>did:[^ \\\"]+)")["v"]) where IsMatch(body, "peer_did=")'
     batch: { timeout: 5s }
     memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
     resource/cluster:
@@ -44,7 +70,11 @@ config:
         exporters: [otlp/dash0]
       logs:
         receivers: [filelog]
-        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        processors: [memory_limiter, k8sattributes, resource/cluster, transform/aethyr, batch]
+        exporters: [otlp/dash0, count]
+      metrics/aethyr:
+        receivers: [count]
+        processors: [resource/cluster, batch]
         exporters: [otlp/dash0]
 ports:
   otlp: { enabled: false }

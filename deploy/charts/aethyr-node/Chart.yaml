@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aethyr-node
+description: Aethyr post-quantum tunnel gateway (aethyr-tunnel responder) as a hostNetwork DaemonSet
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

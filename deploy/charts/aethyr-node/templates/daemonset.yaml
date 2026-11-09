@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aethyr-node
+  namespace: {{ .Release.Namespace }}
+  labels: { app: aethyr-node, app.kubernetes.io/part-of: kubecon-pq-agent }
+spec:
+  selector:
+    matchLabels: { app: aethyr-node }
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels: { app: aethyr-node }
+      annotations:
+        aethyr.io/config-hash: bootstrap
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # Wait until the operator has rendered every tunnel file; the binary refuses to start on a missing file.
+        - name: wait-config
+          image: busybox:1.37
+          command: ["sh", "-c", "for f in {{ range .Values.tunnels }}/etc/aethyr/tunnel-{{ .name }}.json {{ end }}/etc/aethyr/peers.txt; do until [ -s $f ]; do echo waiting for $f; sleep 2; done; done"]
+          volumeMounts:
+            - { name: config, mountPath: /etc/aethyr }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+      containers:
+        {{- range .Values.tunnels }}
+        - name: tunnel-{{ .name }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args: ["/etc/aethyr/tunnel-{{ .name }}.json"]
+          ports:
+            - { name: tunnel, containerPort: {{ .port }}, hostPort: {{ .port }}, protocol: TCP }
+          env:
+            - { name: RUST_LOG, value: "info" }
+            - { name: AWP_NODE_HOME, value: /var/lib/aethyr-node }
+            - name: AWP_NODE_SEED
+              valueFrom: { secretKeyRef: { name: {{ $.Values.seedSecret }}, key: seed } }
+          resources: {{- toYaml $.Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          livenessProbe:
+            tcpSocket: { port: {{ .port }} }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket: { port: {{ .port }} }
+            periodSeconds: 5
+          volumeMounts:
+            - { name: config, mountPath: /etc/aethyr, readOnly: true }
+            - { name: tls, mountPath: /etc/aethyr/tls, readOnly: true }
+            - { name: home, mountPath: /var/lib/aethyr-node }
+        {{- end }}
+      volumes:
+        - name: config
+          configMap: { name: {{ .Values.configMap }}, optional: true }
+        - name: tls
+          secret: { secretName: {{ .Values.tlsSecret }} }
+        - name: home
+          emptyDir: {}

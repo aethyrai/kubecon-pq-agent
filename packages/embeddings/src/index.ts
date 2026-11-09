@@ -1,4 +1,8 @@
-import { type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
+import { env, type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
+
+// Model files: MODEL_CACHE_DIR (default ./.model-cache). MODEL_OFFLINE=1 forbids downloads (the images bake the model in).
+env.cacheDir = process.env.MODEL_CACHE_DIR ?? './.model-cache';
+env.allowRemoteModels = process.env.MODEL_OFFLINE !== '1';
 
 /** Narrow the pipeline overloads: the full union is too complex for tsc (TS2590). */
 type FeatureExtractionFactory = (

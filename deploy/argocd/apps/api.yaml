@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: api
+  namespace: argocd
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aethyrai/kubecon-pq-agent.git
+    targetRevision: main
+    path: deploy/charts/api
+    helm:
+      valueFiles: [../../env/hack/api.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: conf
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]

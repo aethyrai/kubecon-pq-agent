@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/schema" },
+    { "path": "packages/es-client" },
+    { "path": "packages/embeddings" },
+    { "path": "apps/ingest" },
+    { "path": "apps/api" },
+    { "path": "apps/mcp-server" },
+    { "path": "apps/identity" },
+    { "path": "apps/aethyr-operator" }
+  ]
+}

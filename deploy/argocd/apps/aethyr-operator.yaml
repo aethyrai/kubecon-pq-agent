@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aethyr-operator
+  namespace: argocd
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/aethyrai/kubecon-pq-agent.git
+    targetRevision: main
+    path: deploy/charts/aethyr-operator
+    helm:
+      valueFiles: [../../env/hack/aethyr-operator.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aethyr-system
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ServerSideApply=true]

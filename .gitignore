@@ -9,3 +9,4 @@ coverage/
 .kube/
 *.kubeconfig
 # demo evidence screenshots are committed on purpose
+*.tsbuildinfo
