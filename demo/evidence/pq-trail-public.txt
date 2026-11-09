@@ -1,0 +1,16 @@
+# pq-trail-public
+recorded: 2026-11-09T15:47:45-07:00  host: aethyr-core  commit: a504298
+deployed: web web:sha-1ffb105
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ bash -c curl -s -m 30 "https://app.kube.aethyr.cloud/trail/raw" | python3 -c "import sys,json; t=json.load(sys.stdin); print(\"records\", len(t[\"records\"]), \"total\", t.get(\"total\"), \"verified\", t[\"verification\"][\"ok\"], \"fingerprint\", t.get(\"fingerprint\")); [print(r[\"seq\"], r[\"at\"], r[\"kind\"], \" \".join(r[\"data\"].values())) for r in t[\"records\"]]"
+records 3 total 3 verified True fingerprint sha256:3008e2c2f55afa9b6858cde136b2be6c
+1 2026-11-09T19:23:04.792Z policy.observed hackathon ML-KEM-768 ML-DSA-65
+2 2026-11-09T19:23:45.206Z policy.rotated hackathon ML-KEM-768 ML-KEM-1024 ML-DSA-65 ML-DSA-87
+3 2026-11-09T19:26:35.226Z policy.rotated hackathon ML-KEM-1024 ML-KEM-768 ML-DSA-87 ML-DSA-65
+exit: 0
+```

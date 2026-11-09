@@ -1,0 +1,28 @@
+# web-reader-room-82949
+recorded: 2026-11-09T15:48:31-07:00  host: aethyr-core  commit: a504298
+deployed: web web:sha-1ffb105
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ python3 -I /tmp/claude-1000/-home-thehermetist-Desktop-aethyr-console/b71fdd76-c9bd-45d8-9a44-68f132ef6bb8/scratchpad/room-evidence.py
+HTTP 200
+landmarks:
+  <header>
+  <nav aria-label="Primary">
+  <nav aria-label="View mode">
+  <main id="main">
+  <footer>
+headings:
+  Grand Ballroom BDF
+  Accessibility
+ordered list of facts: yes
+ - Wheelchair route: ask at the Info Desk
+ - Captioning: live captions on the room screen for keynotes and breakouts
+ - Hearing loop: not listed
+ - Nearest quiet room: Salt Palace Level 2, Upper Mezzanine
+ - Nearest accessible restroom: ask at the Info Desk
+exit: 0
+```
