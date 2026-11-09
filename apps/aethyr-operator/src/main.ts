@@ -38,12 +38,14 @@ function schedule(): void {
   }, 300);
 }
 
-/** What a reconcile depends on. Status-only updates (our own patches) must not retrigger it. */
-function fingerprint(obj: {
+interface Reconcilable {
   spec: unknown;
   status?: unknown;
   metadata: { generation?: number | undefined };
-}): string {
+}
+
+/** What a reconcile depends on. Status-only updates (our own patches) must not retrigger it. */
+function fingerprint(obj: Reconcilable): string {
   const status = obj.status as { admitted?: boolean } | undefined;
   return JSON.stringify({
     spec: obj.spec,
@@ -103,7 +105,7 @@ function isListObject(v: unknown): v is k8s.KubernetesListObject<k8s.KubernetesO
   return typeof v === 'object' && v !== null && Array.isArray((v as { items?: unknown }).items);
 }
 
-function watch<T>(
+function watch<T extends Reconcilable>(
   plural: string,
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
   store: Map<string, T>,
@@ -124,13 +126,7 @@ function watch<T>(
       return;
     }
     const k = key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace });
-    const fp = fingerprint(
-      parsed.data as {
-        spec: unknown;
-        status?: unknown;
-        metadata: { generation?: number | undefined };
-      },
-    );
+    const fp = fingerprint(parsed.data);
     store.set(k, parsed.data);
     if (seen.get(k) === fp) return; // status-only change, usually our own patch: no reconcile
     seen.set(k, fp);
