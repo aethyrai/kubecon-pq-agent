@@ -75,7 +75,9 @@ const registry: PeerRegistry = {
   },
 };
 
-const trail = await Trail.open(new SecretTrailStore(core, ns));
+const trail = await Trail.open(
+  new SecretTrailStore(core, ns, 'aethyr-trail', (msg, err) => log.warn({ err }, msg)),
+);
 log.info(
   { fingerprint: trail.fingerprint, window: trail.list().length, total: trail.total },
   'trail open',

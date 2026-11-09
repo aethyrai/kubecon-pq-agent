@@ -1,5 +1,5 @@
 import type * as k8s from '@kubernetes/client-node';
-import { isConflict, isNotFound } from './store.js';
+import { isNotFound } from './store.js';
 import { isTrailRecord, SEGMENT_SIZE, type TrailRecord, type TrailStore } from './trail.js';
 
 /** The slice of CoreV1Api this store uses, so tests can fake it without a cluster. */
@@ -22,13 +22,15 @@ export function segmentName(prefix: string, n: number): string {
  * segment Secrets (`aethyr-trail-00001`, ...) of SEGMENT_SIZE records each. No list permission
  * is needed: the index names the newest segment, and load also probes the next one in case a
  * crash landed between creating a segment and updating the index. Writes carry the Secret's
- * resourceVersion and retry on 409, so a concurrent writer cannot silently drop a record.
+ * resourceVersion; a 409 fails the append rather than resending stale data over a concurrent
+ * writer's record. One writer at a time is the deployment's job (strategy Recreate).
  */
 export class SecretTrailStore implements TrailStore {
   constructor(
     private readonly core: SecretApi,
     private readonly namespace: string,
     private readonly prefix = 'aethyr-trail',
+    private readonly warn: (msg: string, err: unknown) => void = () => undefined,
   ) {}
 
   private async read(name: string): Promise<k8s.V1Secret | undefined> {
@@ -52,8 +54,8 @@ export class SecretTrailStore implements TrailStore {
     return Array.isArray(parsed) ? parsed.filter(isTrailRecord) : [];
   }
 
-  /** Replace when the Secret exists, create when it does not, retrying a 409 from a fresh read. */
-  private async write(name: string, data: Record<string, string>, attempt = 0): Promise<void> {
+  /** Replace when the Secret exists, create when it does not. A 409 means another writer won; fail. */
+  private async write(name: string, data: Record<string, string>): Promise<void> {
     const current = await this.read(name);
     const body: k8s.V1Secret = {
       apiVersion: 'v1',
@@ -68,14 +70,8 @@ export class SecretTrailStore implements TrailStore {
       type: 'Opaque',
       stringData: data,
     };
-    try {
-      if (current)
-        await this.core.replaceNamespacedSecret({ name, namespace: this.namespace, body });
-      else await this.core.createNamespacedSecret({ namespace: this.namespace, body });
-    } catch (err) {
-      if (isConflict(err) && attempt < 3) return this.write(name, data, attempt + 1);
-      throw err;
-    }
+    if (current) await this.core.replaceNamespacedSecret({ name, namespace: this.namespace, body });
+    else await this.core.createNamespacedSecret({ namespace: this.namespace, body });
   }
 
   async loadSeed(): Promise<string | undefined> {
@@ -88,14 +84,18 @@ export class SecretTrailStore implements TrailStore {
     await this.write(this.prefix, { seed, segments });
   }
 
-  /** The newest segment number, probing one past the index in case the index write was lost. */
+  /** The newest segment, walking forward past the index while segments exist, since an index write can be lost. */
   private async newestSegment(): Promise<{ n: number; records: TrailRecord[] }> {
     const index = await this.read(this.prefix);
     let n = Number(SecretTrailStore.field(index, 'segments') ?? '0');
     if (n === 0) return { n: 0, records: [] };
-    const probe = await this.read(segmentName(this.prefix, n + 1));
-    if (probe) n += 1;
-    const seg = probe ?? (await this.read(segmentName(this.prefix, n)));
+    let seg = await this.read(segmentName(this.prefix, n));
+    for (;;) {
+      const next = await this.read(segmentName(this.prefix, n + 1));
+      if (!next) break;
+      n += 1;
+      seg = next;
+    }
     return { n, records: SecretTrailStore.records(seg) };
   }
 
@@ -122,8 +122,15 @@ export class SecretTrailStore implements TrailStore {
     const records = full ? [rec] : [...newest.records, rec];
     await this.write(segmentName(this.prefix, n), { records: JSON.stringify(records) });
     if (full) {
-      const seed = (await this.loadSeed()) ?? '';
-      await this.write(this.prefix, { seed, segments: String(n) });
+      // The record is durable once the segment write succeeded. A failed index write must not
+      // reject the append, or the next record would reuse this sequence; load finds the segment
+      // by probing forward from the index.
+      try {
+        const seed = (await this.loadSeed()) ?? '';
+        await this.write(this.prefix, { seed, segments: String(n) });
+      } catch (err) {
+        this.warn(`trail index write failed after segment ${n} was written`, err);
+      }
     }
   }
 }

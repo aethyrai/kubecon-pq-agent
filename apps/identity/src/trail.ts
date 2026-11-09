@@ -19,8 +19,8 @@ import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
 export const TRAIL_ALGORITHM = 'ML-DSA-65';
 export const GENESIS_HASH = '0'.repeat(64);
-/** Records per storage segment. 200 signed records are about 0.9 MiB. */
-export const SEGMENT_SIZE = 200;
+/** Records per storage segment. One record is about 4.8 KB; 150 keep a segment near 0.7 MiB of the 1 MiB limit. */
+export const SEGMENT_SIZE = 150;
 /** Most records the service keeps in memory and serves. */
 export const WINDOW = 500;
 

@@ -85,17 +85,50 @@ test('a reopened store continues the chain across segments with the same key', a
   assert.equal(again.verify().ok, true);
 });
 
-test('a 409 on replace is retried from a fresh read and no record is lost', async () => {
+test('a 409 on replace fails the append instead of overwriting another writer, and the chain stays whole', async () => {
   const api = new FakeSecrets();
   const trail = await Trail.open(new SecretTrailStore(api, 'aethyr-system'), clock());
   await trail.append('token.issued', { peer: 'a' });
-  api.conflictsToInject = 2;
-  await trail.append('token.issued', { peer: 'b' });
+  api.conflictsToInject = 1;
+  await assert.rejects(trail.append('token.issued', { peer: 'b' }), /conflict/);
+  const c = await trail.append('token.issued', { peer: 'c' });
+  assert.equal(c.seq, 2);
   const tail = await new SecretTrailStore(api, 'aethyr-system').loadTail(10);
   assert.deepEqual(
     tail.records.map((r) => r.data.peer),
-    ['a', 'b'],
+    ['a', 'c'],
   );
+  assert.deepEqual(verifyTrail(tail.records, trail.publicKey), { ok: true, count: 2 });
+});
+
+test('a failed index write at rollover keeps the record, warns, and the next append continues the chain', async () => {
+  const api = new FakeSecrets();
+  const warnings: string[] = [];
+  const store = new SecretTrailStore(api, 'aethyr-system', 'aethyr-trail', (m) => warnings.push(m));
+  const trail = await Trail.open(store, clock());
+  for (let i = 0; i < SEGMENT_SIZE; i++) await trail.append('token.issued', { peer: `p${i}` });
+  // Fail only the index write that follows the creation of segment 2.
+  const origReplace = api.replaceNamespacedSecret.bind(api);
+  let armed = true;
+  api.replaceNamespacedSecret = async (p) => {
+    if (armed && p.name === 'aethyr-trail') {
+      armed = false;
+      throw Object.assign(new Error('etcd timeout'), { code: 500 });
+    }
+    return origReplace(p);
+  };
+  const r = await trail.append('token.issued', { peer: 'rollover' });
+  assert.equal(r.seq, SEGMENT_SIZE + 1);
+  assert.equal(warnings.length, 1);
+  const next = await trail.append('token.issued', { peer: 'after' });
+  assert.equal(next.seq, SEGMENT_SIZE + 2);
+  const fresh = await new SecretTrailStore(api, 'aethyr-system').loadTail(5);
+  assert.equal(fresh.total, SEGMENT_SIZE + 2);
+  assert.deepEqual(
+    fresh.records.slice(-2).map((x) => x.data.peer),
+    ['rollover', 'after'],
+  );
+  assert.deepEqual(verifyTrail(fresh.records, trail.publicKey), { ok: true, count: 5 });
 });
 
 test('a segment created before the index was updated is found on load', async () => {
@@ -103,13 +136,14 @@ test('a segment created before the index was updated is found on load', async ()
   const store = new SecretTrailStore(api, 'aethyr-system');
   const trail = await Trail.open(store, clock());
   for (let i = 0; i < SEGMENT_SIZE + 1; i++) await trail.append('token.issued', { peer: `p${i}` });
-  // Simulate the crash: roll the index back to segment 1 while segment 2 exists.
+  for (let i = 0; i < SEGMENT_SIZE; i++) await trail.append('token.issued', { peer: `q${i}` });
+  // Simulate two lost index writes: the index says 1 while segments 2 and 3 exist.
   const idx = api.secrets.get('aethyr-trail');
   assert.ok(idx?.data);
   idx.data.segments = Buffer.from('1').toString('base64');
   const tail = await store.loadTail(5);
-  assert.equal(tail.total, SEGMENT_SIZE + 1);
-  assert.equal(tail.records.at(-1)?.seq, SEGMENT_SIZE + 1);
+  assert.equal(tail.total, 2 * SEGMENT_SIZE + 1);
+  assert.equal(tail.records.at(-1)?.seq, 2 * SEGMENT_SIZE + 1);
 });
 
 test('the seed is written once and never appears in a segment', async () => {
