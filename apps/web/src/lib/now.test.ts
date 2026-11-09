@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { NextMoveResponse, SessionCard } from './api';
-import { type Formatters, headline, validNow } from './now.ts';
+import { type Formatters, headline, MAX_PLAN_IDS, validNow } from './now.ts';
+
+test('the pick limit matches the limit in the api', () => {
+  assert.equal(MAX_PLAN_IDS, 40);
+});
 
 const f: Formatters = {
   time: (l) => l.slice(11, 16),

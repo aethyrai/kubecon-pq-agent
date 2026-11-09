@@ -1,7 +1,7 @@
 import type { LogisticsItem, NextMoveResponse } from '@/lib/api';
 import { dayLabel, formatTime, logistics, planNext, timeRange } from '@/lib/api';
 import { parseMode } from '@/lib/mode';
-import { headline, validNow } from '@/lib/now';
+import { headline, MAX_PLAN_IDS, validNow } from '@/lib/now';
 import { parseIds } from '@/lib/plan';
 import { shortRoom } from '@/lib/ruler';
 import { SessionCardView } from '../_components/session-card';
@@ -47,6 +47,21 @@ export default async function Page({ searchParams }: PageProps<'/now'>) {
         <p className="empty">
           Nothing picked yet. Open <a href={href('/schedule/2026-11-10')}>Tuesday</a> and add talks,
           or <a href={href('/')}>search for a topic</a>. Then this page tells you where to go next.
+        </p>
+        {venueToday}
+      </>
+    );
+  }
+
+  if (ids.length > MAX_PLAN_IDS) {
+    return (
+      <>
+        <h1>Where to be now</h1>
+        <p role="alert">
+          Your plan has {ids.length} picks. This page works with up to {MAX_PLAN_IDS}.
+        </p>
+        <p className="empty">
+          Remove some picks in <a href={href('/plan')}>your plan</a>, and then come back.
         </p>
         {venueToday}
       </>

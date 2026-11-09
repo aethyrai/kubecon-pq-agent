@@ -2,6 +2,9 @@ import type { NextMoveResponse } from './api';
 
 const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 
+/** The most picks that GET /plan/next accepts. */
+export const MAX_PLAN_IDS = 40;
+
 /** The ?now= override, when it has the form the api accepts. */
 export function validNow(v: string | string[] | undefined): string | undefined {
   return typeof v === 'string' && LOCAL_TIME.test(v) ? v : undefined;

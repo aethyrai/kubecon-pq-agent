@@ -137,7 +137,11 @@ export function buildApp(
       return c.json({ error: 'now must be local time, YYYY-MM-DDTHH:MM[:SS]' }, 400);
     const [sessions, logistics] = await Promise.all([
       conf.sessionsById(ids),
-      conf.logistics(now.slice(0, 10)),
+      // Coffee and lunch are a bonus. Their absence must not cost the attendee the next move.
+      conf.logistics(now.slice(0, 10)).catch((err: unknown) => {
+        log.warn({ err }, 'logistics unavailable');
+        return [];
+      }),
     ]);
     const found = new Set(sessions.map((s) => s.id));
     const move = nextMove(sessions.map(card), now, logistics, c.req.query('from') || undefined);

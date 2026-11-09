@@ -115,6 +115,24 @@ test('GET /plan/next rejects no ids, too many ids, and a bad time', async () => 
   assert.equal((await app.request('/plan/next?ids=s1&now=')).status, 400);
 });
 
+test('GET /plan/next still answers when the logistics lookup fails', async () => {
+  const broken = buildApp(
+    { elasticsearch: async () => true },
+    {
+      ...fakeConference(),
+      logistics: async () => {
+        throw new Error('security_exception: 403');
+      },
+    },
+    { DEMO_MODE: 'false' },
+  );
+  const res = await broken.request('/plan/next?ids=s1,s3&now=2026-11-10T13:00');
+  assert.equal(res.status, 200);
+  const b = await json(res);
+  assert.equal(b.state, 'free');
+  assert.deepEqual(b.during_gap, []);
+});
+
 test('GET /plan/next defaults to the venue clock', async () => {
   const b = await json(await app.request('/plan/next?ids=s1'));
   assert.match(String(b.now), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
