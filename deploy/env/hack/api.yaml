@@ -1,5 +1,5 @@
 image:
-  tag: sha-ff350ab
+  tag: sha-a504298
 hpa:
   enabled: true
   min: 2
