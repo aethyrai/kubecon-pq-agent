@@ -12,8 +12,6 @@ spec:
   template:
     metadata:
       labels: { app: aethyr-node }
-      annotations:
-        aethyr.io/config-hash: bootstrap
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

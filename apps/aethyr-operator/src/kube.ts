@@ -100,6 +100,25 @@ export async function patchStatus(
   else await kube.custom.patchClusterCustomObjectStatus(common, opts);
 }
 
+/** A Kubernetes Event in aethyr-system naming the change action, so `kubectl get events` tells the story. */
+export async function recordEvent(kube: Kube, reason: string, message: string): Promise<void> {
+  const now = new Date();
+  const body: k8s.CoreV1Event = {
+    apiVersion: 'v1',
+    kind: 'Event',
+    metadata: { generateName: 'aethyr-operator-', namespace: GATEWAY_NAMESPACE },
+    involvedObject: { kind: 'ConfigMap', name: GATEWAY_CONFIGMAP, namespace: GATEWAY_NAMESPACE },
+    reason,
+    message: message.slice(0, 1000),
+    type: 'Normal',
+    source: { component: 'aethyr-operator' },
+    firstTimestamp: now,
+    lastTimestamp: now,
+    count: 1,
+  };
+  await kube.core.createNamespacedEvent({ namespace: GATEWAY_NAMESPACE, body });
+}
+
 export function condition(type: string, ok: boolean, reason: string, message = ''): Condition {
   return {
     type,

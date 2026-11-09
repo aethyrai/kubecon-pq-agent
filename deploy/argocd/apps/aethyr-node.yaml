@@ -15,6 +15,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: aethyr-system
+  # The operator stamps spec.template.metadata.annotations["aethyr.io/config-hash"] to hot-reload the
+  # gateway; Argo must neither diff nor revert it.
+  ignoreDifferences:
+    - group: apps
+      kind: DaemonSet
+      name: aethyr-node
+      namespace: aethyr-system
+      jqPathExpressions:
+        - '.spec.template.metadata.annotations["aethyr.io/config-hash"]'
   syncPolicy:
     automated: { prune: false, selfHeal: true }
-    syncOptions: [ServerSideApply=true]
+    syncOptions: [ServerSideApply=true, RespectIgnoreDifferences=true]

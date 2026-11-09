@@ -1,74 +1,102 @@
 import { API_GROUP, API_VERSION, CryptoPolicy, PQPeer, PQTunnel } from '@kubecon-pq-agent/schema';
-import * as k8s from '@kubernetes/client-node';
 import pino from 'pino';
-import { condition, connect, patchStatus, rollGateway, upsertConfigMap } from './kube.js';
+import {
+  condition,
+  connect,
+  patchStatus,
+  recordEvent,
+  rollGateway,
+  upsertConfigMap,
+} from './kube.js';
 import { renderGatewayConfig } from './render.js';
 
+/**
+ * Reconcile on a fixed cadence (default 5 s) by listing the three kinds. A long-lived watch can
+ * die silently; a poll cannot. Each pass is cheap (three list calls) and idempotent: it renders,
+ * compares the config hash, and only then writes the ConfigMap, rolls the gateway, patches
+ * status, and records a Kubernetes Event that names the change.
+ */
 const log = pino({ level: process.env.LOG_LEVEL ?? 'info', base: { service: 'aethyr-operator' } });
 const kube = connect();
-const base = `/apis/${API_GROUP}/${API_VERSION}`;
+const INTERVAL_MS = Number(process.env.RECONCILE_INTERVAL_MS ?? 5000);
 
-const policies = new Map<string, CryptoPolicy>();
-const tunnels = new Map<string, PQTunnel>();
-const peers = new Map<string, PQPeer>();
 let lastHash = '';
-let timer: NodeJS.Timeout | undefined;
+let lastFingerprint = '';
 
-function readyStatus(status: unknown): boolean | undefined {
-  const conds = (status as { conditions?: Array<{ type: string; status: string }> } | undefined)
-    ?.conditions;
-  const ready = conds?.find((c) => c.type === 'Ready');
-  return ready ? ready.status === 'True' : undefined;
-}
-function appliedGeneration(status: unknown): number | undefined {
-  const g = (status as { appliedGeneration?: unknown } | undefined)?.appliedGeneration;
-  return typeof g === 'number' ? g : undefined;
+function isListObject(v: unknown): v is { items: unknown[] } {
+  return typeof v === 'object' && v !== null && Array.isArray((v as { items?: unknown }).items);
 }
 
-function key(meta: { name: string; namespace?: string | undefined }): string {
-  return `${meta.namespace ?? ''}/${meta.name}`;
-}
-
-function schedule(): void {
-  if (timer) clearTimeout(timer);
-  timer = setTimeout(() => {
-    reconcile().catch((err) =>
-      log.error({ err }, 'reconcile failed; will retry on the next event'),
-    );
-  }, 300);
-}
-
-interface Reconcilable {
-  spec: unknown;
-  status?: unknown;
-  metadata: { generation?: number | undefined };
-}
-
-/** What a reconcile depends on. Status-only updates (our own patches) must not retrigger it. */
-function fingerprint(obj: Reconcilable): string {
-  const status = obj.status as { admitted?: boolean } | undefined;
-  return JSON.stringify({
-    spec: obj.spec,
-    generation: obj.metadata.generation,
-    admitted: status?.admitted,
+async function list<T>(
+  plural: string,
+  schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
+): Promise<T[]> {
+  const r: unknown = await kube.custom.listClusterCustomObject({
+    group: API_GROUP,
+    version: API_VERSION,
+    plural,
   });
+  if (!isListObject(r)) throw new Error(`list ${plural}: unexpected response shape`);
+  const out: T[] = [];
+  for (const item of r.items) {
+    const parsed = schema.safeParse(item);
+    if (parsed.success && parsed.data) out.push(parsed.data);
+    else
+      log.warn(
+        { plural, name: (item as { metadata?: { name?: string } }).metadata?.name },
+        'object failed schema; ignored',
+      );
+  }
+  return out;
 }
-const seen = new Map<string, string>();
 
-async function reconcile(): Promise<void> {
-  const ps = [...policies.values()];
-  const ts = [...tunnels.values()];
-  const pe = [...peers.values()];
+/** Everything a render depends on: specs, generations, and admission. Status patches do not change it. */
+function fingerprint(ps: CryptoPolicy[], ts: PQTunnel[], pe: PQPeer[]): string {
+  const key = (o: {
+    metadata: { name: string; namespace?: string | undefined; generation?: number | undefined };
+    spec: unknown;
+    status?: unknown;
+  }) =>
+    `${o.metadata.namespace ?? ''}/${o.metadata.name}@${o.metadata.generation ?? 0}:${JSON.stringify(o.spec)}:${(o.status as { admitted?: boolean } | undefined)?.admitted ?? ''}`;
+  return [...ps.map(key), ...ts.map(key), ...pe.map(key)].sort().join('|');
+}
+
+export async function reconcile(): Promise<void> {
+  const [ps, ts, pe] = await Promise.all([
+    list('cryptopolicies', CryptoPolicy),
+    list('pqtunnels', PQTunnel),
+    list('pqpeers', PQPeer),
+  ]);
+  const fp = fingerprint(ps, ts, pe);
+  if (fp === lastFingerprint) return;
+  lastFingerprint = fp;
+  log.info({ policies: ps.length, tunnels: ts.length, peers: pe.length }, 'change detected');
+
   const cfg = renderGatewayConfig(ts, ps, pe);
   if (cfg.hash !== lastHash) {
     await upsertConfigMap(kube, cfg.data, cfg.hash);
     const rolled = await rollGateway(kube, cfg.hash);
+    const levels = ps
+      .map((p) => `${p.metadata.name}: ${p.spec.kem}/${p.spec.signature}`)
+      .join(', ');
     log.info(
-      { hash: cfg.hash, tunnels: ts.length, peers: pe.length, rolled },
+      {
+        hash: cfg.hash,
+        tunnels: ts.length,
+        peers: pe.filter((p) => p.status?.admitted).length,
+        rolled,
+        levels,
+      },
       'gateway config rendered',
     );
+    await recordEvent(
+      kube,
+      'GatewayConfigRendered',
+      `config ${cfg.hash}: ${levels}; ${ts.length} tunnel(s), ${pe.filter((p) => p.status?.admitted).length} admitted peer(s); gateway ${rolled ? 'rolled' : 'unchanged'}`,
+    ).catch((err) => log.warn({ err }, 'event failed'));
     lastHash = cfg.hash;
   }
+
   for (const t of ts) {
     const ok = ps.some((p) => p.metadata.name === t.spec.policyRef.name);
     if (readyStatus(t.status) === ok) continue;
@@ -88,8 +116,13 @@ async function reconcile(): Promise<void> {
     if (appliedGeneration(p.status) === (p.metadata.generation ?? 0)) continue;
     await patchStatus(kube, 'cryptopolicies', p.metadata.name, undefined, {
       appliedGeneration: p.metadata.generation ?? 0,
-      conditions: [condition('Ready', true, 'Applied')],
+      conditions: [condition('Ready', true, 'Applied', `${p.spec.kem} / ${p.spec.signature}`)],
     }).catch((err) => log.warn({ err, policy: p.metadata.name }, 'status patch failed'));
+    await recordEvent(
+      kube,
+      'CryptoPolicyApplied',
+      `${p.metadata.name} generation ${p.metadata.generation ?? 0}: ${p.spec.kem} / ${p.spec.signature} (${p.spec.profile})`,
+    ).catch(() => undefined);
   }
   for (const peer of pe) {
     if (peer.status?.admitted === true) continue;
@@ -98,56 +131,35 @@ async function reconcile(): Promise<void> {
       admitted: true,
       conditions: [condition('Ready', true, 'Admitted')],
     }).catch((err) => log.warn({ err, peer: peer.metadata.name }, 'admission patch failed'));
+    await recordEvent(
+      kube,
+      'PQPeerAdmitted',
+      `${peer.metadata.namespace ?? ''}/${peer.metadata.name} ${peer.spec.algorithm}${peer.spec.did ? ` ${peer.spec.did}` : ''}`,
+    ).catch(() => undefined);
   }
 }
 
-function isListObject(v: unknown): v is k8s.KubernetesListObject<k8s.KubernetesObject> {
-  return typeof v === 'object' && v !== null && Array.isArray((v as { items?: unknown }).items);
+function readyStatus(status: unknown): boolean | undefined {
+  const conds = (status as { conditions?: Array<{ type: string; status: string }> } | undefined)
+    ?.conditions;
+  const ready = conds?.find((c) => c.type === 'Ready');
+  return ready ? ready.status === 'True' : undefined;
+}
+function appliedGeneration(status: unknown): number | undefined {
+  const g = (status as { appliedGeneration?: unknown } | undefined)?.appliedGeneration;
+  return typeof g === 'number' ? g : undefined;
 }
 
-function watch<T extends Reconcilable>(
-  plural: string,
-  schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
-  store: Map<string, T>,
-): void {
-  const informer = k8s.makeInformer(kube.kc, `${base}/${plural}`, async () => {
-    const r: unknown = await kube.custom.listClusterCustomObject({
-      group: API_GROUP,
-      version: API_VERSION,
-      plural,
-    });
-    if (!isListObject(r)) throw new Error(`list ${plural}: unexpected response shape`);
-    return r;
-  });
-  const upsert = (obj: k8s.KubernetesObject): void => {
-    const parsed = schema.safeParse(obj);
-    if (!parsed.success || !parsed.data) {
-      log.warn({ plural, name: obj.metadata?.name }, 'object failed schema; ignored');
-      return;
+async function loop(): Promise<void> {
+  for (;;) {
+    try {
+      await reconcile();
+    } catch (err) {
+      log.error({ err }, 'reconcile failed; retrying next tick');
     }
-    const k = key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace });
-    const fp = fingerprint(parsed.data);
-    store.set(k, parsed.data);
-    if (seen.get(k) === fp) return; // status-only change, usually our own patch: no reconcile
-    seen.set(k, fp);
-    schedule();
-  };
-  informer.on('add', upsert);
-  informer.on('update', upsert);
-  informer.on('delete', (obj) => {
-    const k = key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace });
-    store.delete(k);
-    seen.delete(k);
-    schedule();
-  });
-  informer.on('error', (err) => {
-    log.error({ err, plural }, 'informer error; restarting in 5s');
-    setTimeout(() => void informer.start(), 5000);
-  });
-  void informer.start();
+    await new Promise((r) => setTimeout(r, INTERVAL_MS));
+  }
 }
 
-watch('cryptopolicies', CryptoPolicy, policies);
-watch('pqtunnels', PQTunnel, tunnels);
-watch('pqpeers', PQPeer, peers);
-log.info('aethyr-operator started');
+log.info({ intervalMs: INTERVAL_MS }, 'aethyr-operator started (polling reconciler)');
+void loop();
