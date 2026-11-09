@@ -73,6 +73,15 @@ function isTokenRecord(v: unknown): v is TokenRecord {
   );
 }
 
+export function isConflict(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: unknown }).code === 409
+  );
+}
+
 export function isNotFound(err: unknown): boolean {
   return (
     typeof err === 'object' &&

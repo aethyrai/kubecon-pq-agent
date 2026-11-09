@@ -70,6 +70,34 @@ test('an unadmitted peer gets 403 and no token; a bad body gets 400; unknown tok
   );
 });
 
+test('a different key under an existing peer id is a 409, never an overwrite', async () => {
+  const reg: PeerRegistry = {
+    async register() {
+      return { admitted: false, conflict: true };
+    },
+    async tokenIssued() {},
+  };
+  const app = buildApp(reg, new MemoryTokenStore());
+  const res = await app.request('/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ publicKey: PUB, algorithm: 'ML-DSA-65' }),
+  });
+  assert.equal(res.status, 409);
+});
+
+test('a malformed DID is rejected before any peer is touched', async () => {
+  const reg = registry(true);
+  const app = buildApp(reg, new MemoryTokenStore());
+  const res = await app.request('/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ publicKey: PUB, algorithm: 'ML-DSA-65', did: 'did:key:short' }),
+  });
+  assert.equal(res.status, 400);
+  assert.deepEqual(reg.calls, []);
+});
+
 test('only the token hash is ever stored', () => {
   const t = newToken();
   assert.notEqual(t.token, t.hash);
