@@ -1,0 +1,17 @@
+# pqpeer-laptop
+recorded: 2026-11-09T10:10:57-07:00  host: aethyr-core  commit: 3389d54
+
+```
+$ kubectl get pqpeers,cryptopolicies,pqtunnels -A
+NAMESPACE       NAME                      ALGORITHM   ADMITTED   LASTSEEN   AGE
+aethyr-system   pqpeer.aethyr.io/laptop   ML-DSA-65   true                  5m1s
+
+NAMESPACE   NAME                               KEM          SIGNATURE   HYBRID   PROFILE     SESSIONS   READY   AGE
+            cryptopolicy.aethyr.io/hackathon   ML-KEM-768   ML-DSA-65   X25519   hackathon              True    52m
+
+NAMESPACE       NAME                            POLICY      PORT   ENDPOINTS          SESSIONS   READY   AGE
+aethyr-system   pqtunnel.aethyr.io/identity     hackathon   7445   ["0.0.0.0:7445"]              True    52m
+conf            pqtunnel.aethyr.io/api          hackathon   7443   ["0.0.0.0:7443"]              True    52m
+conf            pqtunnel.aethyr.io/mcp-server   hackathon   7444   ["0.0.0.0:7444"]              True    52m
+exit: 0
+```

@@ -1,0 +1,18 @@
+# tunnel-laptop-to-cluster
+recorded: 2026-11-09T10:10:57-07:00  host: aethyr-core  commit: 3389d54
+
+```
+$ curl -s -w \nHTTP %{http_code}\n http://127.0.0.1:8082/healthz
+{"status":"ok"}
+HTTP 200
+exit: 0
+```
+
+## cluster log: ns=aethyr-system selector=app=aethyr-node container=tunnel-identity match='handshake completed|session established'
+```
+2026-11-09T17:09:26.713017Z  INFO aethyr_node::tunnel: tunnel session established (responder) peer_did=did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0
+2026-11-09T17:09:48.985884Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T17:09:48.985930Z  INFO aethyr_node::tunnel: tunnel session established (responder) peer_did=did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0
+2026-11-09T17:10:57.865906Z  INFO aethyr_node::tunnel: tunnel: AWP handshake completed side="responder" handshake_version=2 sig_alg="ML-DSA-65" kem_alg="ML-KEM-768" hash_alg="BLAKE3" aead_alg="XChaCha20-Poly1305" peer_did="did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0" tenant="did:aethyr:org:kubecon-pq-agent"
+2026-11-09T17:10:57.865937Z  INFO aethyr_node::tunnel: tunnel session established (responder) peer_did=did:aethyr:device:EOchfNo1_NXybPBZRPbujp35rIg1kNTudanCWgcdWUy0
+```
