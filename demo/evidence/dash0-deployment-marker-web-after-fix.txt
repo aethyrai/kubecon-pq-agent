@@ -1,0 +1,21 @@
+# dash0-deployment-marker-web-after-fix
+recorded: 2026-11-09T15:01:14-07:00  host: aethyr-core  commit: 68cadf1
+deployed: web web:sha-1ffb105
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl -n conf get jobs -l app=web-deploy-event -o custom-columns="NAME:.metadata.name,CREATED:.metadata.creationTimestamp,SUCCEEDED:.status.succeeded,FAILED:.status.failed"; kubectl -n conf logs job/web-deploy-event-succeeded; kubectl -n conf get pods -l app=web -o custom-columns="NAME:.metadata.name,IMG:.spec.containers[0].image,READY:.status.containerStatuses[0].ready"; curl -s -m 10 https://app.kube.aethyr.cloud/about | grep -o "What you see in Dash0\|and OpenTelemetry" | sort -u
+NAME                         CREATED                SUCCEEDED   FAILED
+web-deploy-event-succeeded   2026-11-09T22:00:15Z   1           <none>
+curl: (7) Failed to connect to otel-collector.observability.svc port 4318 after 2 ms: Could not connect to server
+dash0.deployment web sha-1ffb105 succeeded -> HTTP 200 {"partialSuccess":{}}
+NAME                   IMG                                                 READY
+web-7b8bf4f576-2h9k4   ghcr.io/aethyrai/kubecon-pq-agent/web:sha-1ffb105   true
+web-7b8bf4f576-gbpmt   ghcr.io/aethyrai/kubecon-pq-agent/web:sha-1ffb105   true
+and OpenTelemetry
+What you see in Dash0
+exit: 0
+```
