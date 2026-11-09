@@ -1,0 +1,26 @@
+# chaos-es-latency-fault
+recorded: 2026-11-09T14:59:30-07:00  host: aethyr-core  commit: 085c5db
+
+```
+$ bash -c 
+API=http://127.0.0.1:8085; t() { curl -s -o /dev/null -w "%{time_total}" -m 20 "$API/search?q=argo+rollouts+$1&size=5"; }
+echo "baseline: $(t 0)s $(t 1)s $(t 2)s"
+echo "set fault 1500 ms (all replicas):"; bash demo/chaos/es-latency.sh 1500
+echo "status:"; bash demo/chaos/es-latency.sh status
+printf "with fault, 8 searches: "; for i in 1 2 3 4 5 6 7 8; do printf "%ss " "$(t $i)"; done; echo
+echo "reset:"; bash demo/chaos/es-latency.sh reset
+echo "status:"; bash demo/chaos/es-latency.sh status
+echo "after reset: $(t 9)s $(t 10)s $(t 11)s"
+baseline: 0.118020s 0.124499s 0.109709s
+set fault 1500 ms (all replicas):
+{"fault":"es-latency","esLatencyMs":1500}
+status:
+{"esLatencyMs":1500}
+with fault, 8 searches: 1.642759s 1.614608s 1.604539s 1.608252s 1.579535s 1.644015s 1.571251s 1.566506s 
+reset:
+{"reset":true,"esLatencyMs":0}
+status:
+{"esLatencyMs":0}
+after reset: 0.074628s 0.115967s 0.105646s
+exit: 0
+```
