@@ -145,3 +145,8 @@ export function timeRange(s: { start: string; end: string }): string {
 export function roomSlug(room: string): string {
   return encodeURIComponent(room);
 }
+/** Weekday name for a conference day, or the raw date for an unknown one. */
+export function dayLabel(day: string): string {
+  if (day === '2026-11-08') return 'Sunday';
+  return DAYS.find((d) => d.day === day)?.label ?? day;
+}
