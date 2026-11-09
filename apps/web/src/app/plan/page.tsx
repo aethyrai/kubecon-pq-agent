@@ -18,7 +18,17 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
       </>
     );
   }
-  const r = await planConflicts(ids.length > 1 ? ids : [...ids, ids[0] ?? '']);
+  let r: Awaited<ReturnType<typeof planConflicts>>;
+  try {
+    r = await planConflicts(ids.length > 1 ? ids : [...ids, ids[0] ?? '']);
+  } catch (e) {
+    return (
+      <>
+        <h1>My plan</h1>
+        <p role="alert">Plan unavailable: {e instanceof Error ? e.message : 'api error'}</p>
+      </>
+    );
+  }
   const bad = conflictedIds(r.conflicts);
   const byId = new Map(r.sessions.map((s) => [s.id, s]));
   return (

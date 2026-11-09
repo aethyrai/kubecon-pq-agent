@@ -45,6 +45,7 @@ export default async function Page({ params, searchParams }: PageProps<'/schedul
       <form action={`/schedule/${day}`} method="get" aria-label="Filter the day">
         <input type="hidden" name="mode" value={mode} />
         <input type="hidden" name="ids" value={ids.join(',')} />
+        {event && <input type="hidden" name="event" value={event} />}
         <label htmlFor="track">Track</label>
         <select id="track" name="track" defaultValue={track ?? ''}>
           <option value="">All tracks</option>

@@ -14,12 +14,12 @@ export default async function Page({ params, searchParams }: PageProps<'/rooms/[
   const parts = name.split('|').map((p) => p.trim());
   const venue = byId?.room.venue ?? parts[0] ?? name;
   const level = byId?.room.level ?? parts.find((p) => /^level/i.test(p)) ?? '';
+  // Only facts the api publishes for this room. The venue has not published per-room accessibility
+  // data, so an unknown room gets the venue-wide pointers and says so.
   const facts = byId?.facts ?? [
-    `Wheelchair route: ${venue === 'Salt Palace' ? 'all Salt Palace levels are step-free; elevators by the 200 South entrance and the Upper Mezzanine' : 'elevators at the main lobby; ask the hotel desk'}`,
-    'Captioning: live captions on the room screen for keynotes and breakouts',
-    'Hearing loop: not listed; ask the Info Desk for an assistive listening receiver',
-    'Nearest quiet room: Salt Palace Level 2, Upper Mezzanine',
-    'Nearest accessible restroom: every restroom block at the Salt Palace has an accessible stall; ask a volunteer for the closest',
+    'Per-room accessibility details are not published for this room yet.',
+    'Ask at any Info Desk or a volunteer for the step-free route, the nearest accessible restroom, and the quiet room.',
+    'Live captioning is shown on the room screen for keynotes and breakout sessions.',
   ];
   return (
     <>

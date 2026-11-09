@@ -130,12 +130,13 @@ export const DAYS: Array<{ day: string; label: string }> = [
   { day: '2026-11-12', label: 'Thursday' },
 ];
 
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'America/Denver',
-  });
+/** Session times are offset-less Mountain wall-clock strings (2026-11-10T11:30:00). Format them as given. */
+export function formatTime(local: string): string {
+  const m = /T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return local;
+  const h24 = Number(m[1]);
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${m[2]} ${h24 < 12 ? 'AM' : 'PM'}`;
 }
 export function timeRange(s: { start: string; end: string }): string {
   return `${formatTime(s.start)} to ${formatTime(s.end)}`;
