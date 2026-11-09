@@ -1,0 +1,71 @@
+mode: deployment
+replicaCount: 1
+fullnameOverride: otel-collector
+image:
+  repository: otel/opentelemetry-collector-k8s
+presets:
+  kubernetesAttributes:
+    enabled: true
+    extractAllPodLabels: true
+    extractAllPodAnnotations: false
+  kubernetesEvents:
+    enabled: true
+extraEnvs:
+  - name: DASH0_AUTH_TOKEN
+    valueFrom:
+      secretKeyRef: { name: dash0-auth, key: token }
+  - name: DASH0_ENDPOINT
+    valueFrom:
+      secretKeyRef: { name: dash0-auth, key: endpoint }
+  - name: DASH0_DATASET
+    value: default
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc: { endpoint: 0.0.0.0:4317 }
+        http: { endpoint: 0.0.0.0:4318 }
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  processors:
+    batch: { timeout: 2s, send_batch_size: 512 }
+    memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
+    resource/cluster:
+      attributes:
+        - { key: k8s.cluster.name, value: kube-aethyr, action: upsert }
+        - { key: deployment.environment.name, value: hackathon, action: upsert }
+  exporters:
+    otlp/dash0:
+      endpoint: ${env:DASH0_ENDPOINT}
+      headers:
+        Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+        Dash0-Dataset: ${env:DASH0_DATASET}
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        exporters: [otlp/dash0]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        exporters: [otlp/dash0]
+      logs:
+        receivers: [otlp, k8sobjects]
+        processors: [memory_limiter, k8sattributes, resource/cluster, batch]
+        exporters: [otlp/dash0]
+ports:
+  jaeger-compact: { enabled: false }
+  jaeger-thrift: { enabled: false }
+  jaeger-grpc: { enabled: false }
+  zipkin: { enabled: false }
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: 500m, memory: 512Mi }
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
