@@ -7,13 +7,14 @@ COPY apps/identity/package.json apps/identity/
 RUN npm ci --no-audit --no-fund --workspace @kubecon-pq-agent/identity --include-workspace-root
 COPY packages/schema packages/schema
 COPY apps/identity apps/identity
-RUN npm run build -w @kubecon-pq-agent/schema && npm run build -w @kubecon-pq-agent/identity && npm prune --omit=dev
+RUN npm run build -w @kubecon-pq-agent/schema && npm run build -w @kubecon-pq-agent/identity && npm prune --omit=dev && mkdir -p apps/identity/node_modules
 
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8082
 USER 10001:10001
 COPY --from=build --chown=10001:10001 /app/node_modules node_modules
+COPY --from=build --chown=10001:10001 /app/apps/identity/node_modules apps/identity/node_modules
 COPY --from=build --chown=10001:10001 /app/packages/schema/package.json packages/schema/package.json
 COPY --from=build --chown=10001:10001 /app/packages/schema/dist packages/schema/dist
 COPY --from=build --chown=10001:10001 /app/apps/identity/package.json apps/identity/package.json
