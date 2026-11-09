@@ -8,7 +8,7 @@ Open every screen in its own browser tab, in this order, before the slot. Hotspo
 | Clock | Step | Say (one sentence) | Screen / command |
 | --- | --- | --- | --- |
 | 0:00 | Open | 9,000 people, 300 sessions, hostile Wi-Fi, and your meeting graph is organizational intelligence. | README |
-| 0:20 | Product | Watch the coding agent plan Tuesday. | Cline/Claude Code: `recommend` then `check_conflicts` via `http://127.0.0.1:8081/mcp` |
+| 0:20 | Product | Watch the coding agent plan Tuesday. | Claude Code: `recommend` then `check_conflicts` via `http://127.0.0.1:8081/mcp` |
 | 1:10 | Accessibility | The same product in a screen reader. | `https://app.kube.aethyr.cloud/rooms/82949?mode=reader` with VoiceOver/NVDA |
 | 1:40 | Trace | One request, one trace, from the tunnel to Elasticsearch, and every request's log line carries its trace id. | Dash0 trace for `/recommend`: web, api, `search.hybrid` with `search.leg.bm25` and `search.leg.knn`, Elasticsearch spans; open a `search` log line and jump to its trace |
 | 2:05 | Deploys | Every promotion today left a mark on the chart. | Dash0 api chart: deployment markers, one per image tag (Argo CD sync hooks post `dash0.deployment`) |
