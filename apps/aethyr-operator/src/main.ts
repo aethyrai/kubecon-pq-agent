@@ -14,14 +14,44 @@ const peers = new Map<string, PQPeer>();
 let lastHash = '';
 let timer: NodeJS.Timeout | undefined;
 
+function readyStatus(status: unknown): boolean | undefined {
+  const conds = (status as { conditions?: Array<{ type: string; status: string }> } | undefined)
+    ?.conditions;
+  const ready = conds?.find((c) => c.type === 'Ready');
+  return ready ? ready.status === 'True' : undefined;
+}
+function appliedGeneration(status: unknown): number | undefined {
+  const g = (status as { appliedGeneration?: unknown } | undefined)?.appliedGeneration;
+  return typeof g === 'number' ? g : undefined;
+}
+
 function key(meta: { name: string; namespace?: string | undefined }): string {
   return `${meta.namespace ?? ''}/${meta.name}`;
 }
 
 function schedule(): void {
   if (timer) clearTimeout(timer);
-  timer = setTimeout(() => void reconcile(), 300);
+  timer = setTimeout(() => {
+    reconcile().catch((err) =>
+      log.error({ err }, 'reconcile failed; will retry on the next event'),
+    );
+  }, 300);
 }
+
+/** What a reconcile depends on. Status-only updates (our own patches) must not retrigger it. */
+function fingerprint(obj: {
+  spec: unknown;
+  status?: unknown;
+  metadata: { generation?: number | undefined };
+}): string {
+  const status = obj.status as { admitted?: boolean } | undefined;
+  return JSON.stringify({
+    spec: obj.spec,
+    generation: obj.metadata.generation,
+    admitted: status?.admitted,
+  });
+}
+const seen = new Map<string, string>();
 
 async function reconcile(): Promise<void> {
   const ps = [...policies.values()];
@@ -39,6 +69,7 @@ async function reconcile(): Promise<void> {
   }
   for (const t of ts) {
     const ok = ps.some((p) => p.metadata.name === t.spec.policyRef.name);
+    if (readyStatus(t.status) === ok) continue;
     await patchStatus(kube, 'pqtunnels', t.metadata.name, t.metadata.namespace, {
       endpoints: ok ? [`0.0.0.0:${t.spec.listener.port}`] : [],
       conditions: [
@@ -52,6 +83,7 @@ async function reconcile(): Promise<void> {
     }).catch((err) => log.warn({ err, tunnel: t.metadata.name }, 'status patch failed'));
   }
   for (const p of ps) {
+    if (appliedGeneration(p.status) === (p.metadata.generation ?? 0)) continue;
     await patchStatus(kube, 'cryptopolicies', p.metadata.name, undefined, {
       appliedGeneration: p.metadata.generation ?? 0,
       conditions: [condition('Ready', true, 'Applied')],
@@ -100,7 +132,9 @@ function watch<T>(
   informer.on('add', upsert);
   informer.on('update', upsert);
   informer.on('delete', (obj) => {
-    store.delete(key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace }));
+    const k = key({ name: obj.metadata?.name ?? '', namespace: obj.metadata?.namespace });
+    store.delete(k);
+    seen.delete(k);
     schedule();
   });
   informer.on('error', (err) => {

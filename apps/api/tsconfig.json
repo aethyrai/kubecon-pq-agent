@@ -1,6 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": "src", "types": ["node"] },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "composite": true
+  },
   "include": ["src"],
-  "references": [{ "path": "../../packages/es-client" }, { "path": "../../packages/embeddings" }]
+  "references": [
+    {
+      "path": "../../packages/es-client"
+    },
+    {
+      "path": "../../packages/embeddings"
+    }
+  ]
 }
