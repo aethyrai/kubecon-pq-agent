@@ -60,10 +60,11 @@ spec:
               cd /tmp
               openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -days {{ .Values.bootstrap.caDays }} -subj "/CN=aethyr tunnel CA" -keyout ca.key -out ca.crt
               openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -subj "/CN=aethyr-gateway" -keyout tls.key -out server.csr
-              openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out tls.crt \
-                -extfile <(printf "subjectAltName={{ .Values.bootstrap.serverSans }}\nextendedKeyUsage=serverAuth")
+              printf "subjectAltName={{ .Values.bootstrap.serverSans }}\nextendedKeyUsage=serverAuth\n" > server.ext
+              openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out tls.crt -extfile server.ext
               openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -subj "/CN=aethyr-client" -keyout client.key -out client.csr
-              openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out client.crt -extfile <(printf "extendedKeyUsage=clientAuth")
+              printf "extendedKeyUsage=clientAuth\n" > client.ext
+              openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days {{ .Values.bootstrap.caDays }} -out client.crt -extfile client.ext
               SEED=$(openssl rand -hex 32)
               mk() { # name key=file...
                 n=$1; shift; data=""
