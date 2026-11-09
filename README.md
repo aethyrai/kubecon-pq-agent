@@ -1,6 +1,6 @@
 # kubecon-pq-agent
 
-A KubeCon NA 2026 conference agent. An MCP server and an accessible web client that answer "which talk, which booth, which side event, who should I meet" over the real schedule. MCP clients reach the agent over an Aethyr post-quantum tunnel. The public web client uses HTTPS.
+A KubeCon NA 2026 conference agent. An MCP server and an accessible web client that answer "where should I be now, and where next", and "which talk, which booth, which side event, who should I meet" over the real schedule. MCP clients reach the agent over an Aethyr post-quantum tunnel. The public web client uses HTTPS.
 
 Built for the Cloud Native Hackathon, Salt Lake City, November 9, 2026.
 
@@ -8,7 +8,7 @@ Built with Gitar, Dash0, Radar, Elasticsearch, and OpenTelemetry.
 
 ## What it is
 
-One Kubernetes cluster runs the whole product: Elasticsearch holds six indices built from the public KubeCon schedule, sponsor directory, and co-located event pages; `api` answers hybrid search (BM25 + local vector search fused with reciprocal rank fusion), recommendations, day schedules, conflict checks, booths, side events, and room accessibility; `mcp-server` exposes the same as eight MCP tools, a schedule resource, and a "plan my day" prompt; `web` is a Next.js client with full, text, and screen-reader modes. Embeddings run on the CPU inside the cluster, so no attendee query leaves it.
+One Kubernetes cluster runs the whole product: Elasticsearch holds seven indices built from the public KubeCon schedule, sponsor directory, and co-located event pages; `api` answers hybrid search (BM25 + local vector search fused with reciprocal rank fusion), recommendations, day schedules, conflict checks, next-move guidance, logistics, booths, side events, and room accessibility; `mcp-server` exposes the same as ten MCP tools, a schedule resource, and a "plan my day" prompt; `web` is a Next.js client with full, text, and screen-reader modes. Walk times are estimates from venue and level, because the schedule publishes no distances. The plan stays in the page address, so the server stores no attendee plan. Embeddings run on the CPU inside the cluster, so no attendee query leaves it.
 
 The Aethyr layer wraps it: a `CryptoPolicy` cluster resource declares the key exchange (ML-KEM-768 or ML-KEM-1024) and signature level, `PQTunnel` resources declare which services are reachable through the post-quantum tunnel, and `PQPeer` resources are attendees. `aethyr-operator` renders those into gateway config and hot-reloads the gateway DaemonSet; `identity` admits peers and issues short-lived tokens. After the first scaffold commit, every change is a pull request reviewed by Gitar, built by GitHub Actions, deployed by Argo CD, canaried by Argo Rollouts, watched by Radar, and traced end to end in Dash0.
 

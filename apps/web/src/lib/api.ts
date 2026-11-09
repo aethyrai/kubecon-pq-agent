@@ -35,11 +35,51 @@ export interface Conflict {
   b: string;
   overlapMinutes: number;
 }
+export interface TightConnection {
+  from: string;
+  to: string;
+  gapMinutes: number;
+  walkMinutes: number;
+  shortByMinutes: number;
+}
 export interface ConflictsResponse {
   ids: string[];
   missing: string[];
   conflicts: Conflict[];
+  /** Absent from an api that predates walk estimates. */
+  tight?: TightConnection[];
   sessions: SessionCard[];
+}
+export interface LogisticsItem {
+  id: string;
+  kind: 'registration' | 'coffee' | 'lunch';
+  title: string;
+  day: string;
+  start: string;
+  end: string;
+  room: string;
+  venue: string;
+}
+export interface LogisticsResponse {
+  today: string;
+  items: LogisticsItem[];
+}
+export interface NextMoveResponse {
+  ids: string[];
+  missing: string[];
+  now: string;
+  state: 'no_plan' | 'in_session' | 'go_now' | 'free' | 'done';
+  current: { session: SessionCard; started_minutes_ago: number; ends_in_minutes: number } | null;
+  next: {
+    session: SessionCard;
+    starts_in_minutes: number;
+    walk_estimate_minutes: number | null;
+    leave_by: string | null;
+    leave_in_minutes: number | null;
+  } | null;
+  free_minutes: number | null;
+  during_gap: LogisticsItem[];
+  walk_basis: 'estimate';
 }
 export interface Exhibitor {
   id: string;
@@ -104,6 +144,14 @@ export const planConflicts = (ids: string[]): Promise<ConflictsResponse> =>
     `/plan/conflicts?ids=${encodeURIComponent(ids.join(','))}`,
     (v): v is ConflictsResponse => isObject(v) && Array.isArray(v.conflicts),
   );
+export const planNext = (ids: string[], now?: string): Promise<NextMoveResponse> =>
+  getJson(
+    `/plan/next?ids=${encodeURIComponent(ids.join(','))}${now ? `&now=${encodeURIComponent(now)}` : ''}`,
+    (v): v is NextMoveResponse =>
+      isObject(v) && typeof v.state === 'string' && Array.isArray(v.during_gap),
+  );
+export const logistics = (): Promise<LogisticsResponse> =>
+  getJson('/logistics', (v): v is LogisticsResponse => isObject(v) && Array.isArray(v.items));
 export const booths = (q: string): Promise<{ exhibitors: Exhibitor[] }> =>
   getJson(
     `/booths?q=${encodeURIComponent(q)}&size=30`,

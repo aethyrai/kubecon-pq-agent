@@ -10,6 +10,7 @@ export const INDEX_NAMES = [
   'side_events',
   'rooms',
   'attendees',
+  'logistics',
 ] as const;
 
 export type IndexName = (typeof INDEX_NAMES)[number];
@@ -126,6 +127,19 @@ export const MAPPINGS: Record<IndexName, estypes.MappingTypeMapping> = {
       free_slots: { type: 'date_range' },
       updated_at: date(),
       interest_embedding: embedding(),
+    },
+  },
+  logistics: {
+    dynamic: 'strict',
+    properties: {
+      id: keyword(),
+      kind: keyword(),
+      title: textWithKeyword(),
+      day: date(),
+      start: date(),
+      end: date(),
+      room: keyword(),
+      venue: keyword(),
     },
   },
 };

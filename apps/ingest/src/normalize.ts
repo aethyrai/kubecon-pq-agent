@@ -1,4 +1,4 @@
-import type { RoomDoc, SessionDoc, SpeakerDoc } from './documents.js';
+import type { LogisticsDoc, RoomDoc, SessionDoc, SpeakerDoc } from './documents.js';
 import type { LfSchedData, LfSession } from './sources/lf-sched.js';
 
 const CATEGORY_TRACK = 'All Sessions';
@@ -97,6 +97,36 @@ export function isTalk(session: LfSession): boolean {
   if (session.isServiceSession || session.title.trim().length === 0) return false;
   if (session.speakers.length > 0) return true;
   return !SERVICE_TITLE.test(session.title);
+}
+
+function logisticsKind(title: string): LogisticsDoc['kind'] | undefined {
+  if (/^registration \+ badge/i.test(title)) return 'registration';
+  if (/^coffee break/i.test(title)) return 'coffee';
+  if (/^lunch\b/i.test(title)) return 'lunch';
+  return undefined;
+}
+
+/** The registration, coffee, and lunch rows that normalizeSessions leaves out. */
+export function normalizeLogistics(data: LfSchedData): LogisticsDoc[] {
+  const lk = buildLookup(data);
+  return data.all.sessions.flatMap((s) => {
+    const title = s.title.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+    const kind = logisticsKind(title);
+    if (!kind || isTalk(s)) return [];
+    const room = s.roomId === null ? '' : (lk.roomName.get(s.roomId) ?? '');
+    return [
+      {
+        id: s.id,
+        kind,
+        title,
+        day: s.startsAt.slice(0, 10),
+        start: s.startsAt,
+        end: s.endsAt,
+        room,
+        venue: room ? parseRoomName(room).venue : '',
+      },
+    ];
+  });
 }
 
 export function normalizeSessions(data: LfSchedData): SessionDoc[] {

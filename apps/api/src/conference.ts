@@ -51,6 +51,16 @@ export interface Room {
   quiet_room_nearby: string;
   nearest_accessible_restroom: string;
 }
+export interface LogisticsItem {
+  id: string;
+  kind: 'registration' | 'coffee' | 'lunch';
+  title: string;
+  day: string;
+  start: string;
+  end: string;
+  room: string;
+  venue: string;
+}
 
 /** Everything the routes need from the data layer, so the routes are tested without Elasticsearch. */
 export interface Conference {
@@ -61,6 +71,7 @@ export interface Conference {
   searchBooths(text: string, size: number): Promise<Hit<Exhibitor>[]>;
   sideEvents(day?: string): Promise<SideEvent[]>;
   room(id: string): Promise<Room | undefined>;
+  logistics(day?: string): Promise<LogisticsItem[]>;
 }
 
 /** Sessions overlap when one starts before the other ends and they are on the same day. */

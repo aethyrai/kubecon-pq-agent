@@ -28,6 +28,7 @@ export function SiteNav() {
   return (
     <>
       <nav aria-label="Primary">
+        <a href={to('/now')}>Now</a>
         <a href={to('/')}>Search</a>
         <a href={to('/schedule/2026-11-10')}>Schedule</a>
         <a href={to('/plan')}>

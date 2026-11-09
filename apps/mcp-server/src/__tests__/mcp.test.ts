@@ -42,7 +42,40 @@ const textOf = (res: unknown): string => {
   return c && typeof c === 'object' && 'text' in c ? String((c as { text: unknown }).text) : '';
 };
 
-test('all eight tools, the schedule resource, and the plan prompt are listed', async () => {
+test('whats_next and logistics map onto their api routes', async () => {
+  const api = fakeApi();
+  const { client, server } = await connect(api);
+  await client.callTool({
+    name: 'whats_next',
+    arguments: {
+      session_ids: ['s1', 's2'],
+      now: '2026-11-10T11:30',
+      from_room: 'Hyatt Regency | Level 4 | Regency Ballroom B-D',
+    },
+  });
+  assert.equal(
+    api.calls[0],
+    'GET /plan/next?ids=s1,s2&now=2026-11-10T11:30&from=Hyatt Regency | Level 4 | Regency Ballroom B-D',
+  );
+  await client.callTool({ name: 'whats_next', arguments: { session_ids: ['s1'] } });
+  assert.equal(api.calls[1], 'GET /plan/next?ids=s1');
+  await client.callTool({ name: 'logistics', arguments: { day: '2026-11-10' } });
+  assert.equal(api.calls[2], 'GET /logistics?day=2026-11-10');
+  await client.callTool({ name: 'logistics', arguments: {} });
+  assert.equal(api.calls[3], 'GET /logistics');
+  const empty = await client.callTool({ name: 'whats_next', arguments: { session_ids: [] } });
+  assert.equal(empty.isError, true);
+  const badTime = await client.callTool({
+    name: 'whats_next',
+    arguments: { session_ids: ['s1'], now: 'soon' },
+  });
+  assert.equal(badTime.isError, true);
+  assert.equal(api.calls.length, 4);
+  await client.close();
+  await server.close();
+});
+
+test('all ten tools, the schedule resource, and the plan prompt are listed', async () => {
   const api = fakeApi();
   const { client, server } = await connect(api);
   const tools = (await client.listTools()).tools.map((t) => t.name).sort();
@@ -50,11 +83,13 @@ test('all eight tools, the schedule resource, and the plan prompt are listed', a
     'check_conflicts',
     'find_booths',
     'get_schedule',
+    'logistics',
     'ping',
     'recommend',
     'room_accessibility',
     'search_sessions',
     'side_events',
+    'whats_next',
   ]);
   const templates = await client.listResourceTemplates();
   assert.equal(templates.resourceTemplates[0]?.uriTemplate, 'kubecon://schedule/{day}');

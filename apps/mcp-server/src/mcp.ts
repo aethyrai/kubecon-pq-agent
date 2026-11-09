@@ -147,12 +147,50 @@ export function buildMcpServer(api: ApiClient): McpServer {
     {
       title: 'Check conflicts',
       description:
-        'Given session ids, return the pairs that overlap in time, with the overlap in minutes, plus any ids that do not exist.',
+        'Given session ids, return the pairs that overlap in time, with the overlap in minutes, the back-to-back pairs with less time than the estimated walk (tight), plus any ids that do not exist. Walk times are estimates from venue and level, so say so.',
       inputSchema: { session_ids: z.array(z.string().min(1)).min(2).max(40) },
     },
     traced('check_conflicts', async ({ session_ids }) =>
       text(await api.get('/plan/conflicts', { ids: session_ids.join(',') })),
     ),
+  );
+
+  server.registerTool(
+    'whats_next',
+    {
+      title: "What's next",
+      description:
+        'Where the attendee should be now and next, given the session ids in their plan. Returns a state (no_plan, in_session, go_now, free, done), the current session, the next session with an estimated walk and leave-by time, open minutes, and coffee or lunch during that time. Use this for any question about where to go or what to do now. Walk times are estimates, so say so. To fill open time, call recommend for that day. If the attendee missed a session, call again: the answer moves on by itself.',
+      inputSchema: {
+        session_ids: z.array(z.string().min(1)).min(1).max(40),
+        now: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/)
+          .optional()
+          .describe(
+            'Salt Lake City local time, YYYY-MM-DDTHH:MM. Omit it to use the current time.',
+          ),
+        from_room: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('Full room name of where the attendee is, if not at their last session'),
+      },
+    },
+    traced('whats_next', async ({ session_ids, now, from_room }) =>
+      text(await api.get('/plan/next', { ids: session_ids.join(','), now, from: from_room })),
+    ),
+  );
+
+  server.registerTool(
+    'logistics',
+    {
+      title: 'Logistics',
+      description:
+        'Registration and badge pick-up, coffee breaks, and lunch: times and rooms from the official schedule.',
+      inputSchema: { day: Day.optional() },
+    },
+    traced('logistics', async ({ day }) => text(await api.get('/logistics', { day }))),
   );
 
   server.registerTool(

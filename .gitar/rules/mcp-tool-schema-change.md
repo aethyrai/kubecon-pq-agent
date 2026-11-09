@@ -7,7 +7,8 @@ actions: Verify the web client and the test fixture were updated; request change
 ---
 
 When a PR changes a tool in `apps/mcp-server/` (`search_sessions`, `get_schedule`, `recommend`,
-`find_people`, `find_booths`, `side_events`, `room_accessibility`, `check_conflicts`) or a resource or
+`find_people`, `find_booths`, `side_events`, `room_accessibility`, `check_conflicts`, `whats_next`,
+`logistics`) or a resource or
 prompt:
 
 - Check that the matching call in `apps/web/` sends the new input shape and renders the new output
