@@ -1,0 +1,156 @@
+{
+  "kind": "Dashboard",
+  "metadata": { "name": "kubecon-pq-agent-stage" },
+  "spec": {
+    "display": { "name": "kubecon-pq-agent: stage board" },
+    "duration": "1h",
+    "refreshInterval": "30s",
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": { "title": "Post-quantum tunnel" },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": { "$ref": "#/spec/panels/handshakes-by-kem" }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": { "$ref": "#/spec/panels/handshakes-by-sig" }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": { "title": "Search path" },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": { "$ref": "#/spec/panels/api-p95" }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": { "$ref": "#/spec/panels/api-rate" }
+            }
+          ]
+        }
+      }
+    ],
+    "panels": {
+      "handshakes-by-kem": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tunnel handshakes by key exchange",
+            "description": "Rotating the CryptoPolicy moves every new handshake from ML-KEM-768 to ML-KEM-1024 and back."
+          },
+          "plugin": { "kind": "TimeSeriesChart", "spec": { "legend": { "position": "bottom" } } },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "sum by (kem) (increase({otel_metric_name=\"aethyr.tunnel.handshakes\", otel_metric_type=\"sum\"}[5m]))",
+                    "seriesNameFormat": "{{kem}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "handshakes-by-sig": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tunnel handshakes by signature",
+            "description": "ML-DSA-65 at the hackathon profile, ML-DSA-87 under CNSA 2.0."
+          },
+          "plugin": { "kind": "TimeSeriesChart", "spec": { "legend": { "position": "bottom" } } },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "sum by (sig) (increase({otel_metric_name=\"aethyr.tunnel.handshakes\", otel_metric_type=\"sum\"}[5m]))",
+                    "seriesNameFormat": "{{sig}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-p95": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "api server spans, p95 latency",
+            "description": "The planted Elasticsearch fault lifts this to about 1.6 s; the deployment markers sit on this chart."
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "yAxis": { "format": { "unit": "milliseconds" } },
+              "legend": { "position": "bottom" }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "histogram_quantile(0.95, sum by (le) (rate({otel_metric_name=\"dash0.spans.duration\", service_name=\"api\", otel_span_kind=\"server\"}[$__interval]))) * 1000",
+                    "seriesNameFormat": "p95"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": { "name": "api server spans per second, by status" },
+          "plugin": { "kind": "TimeSeriesChart", "spec": { "legend": { "position": "bottom" } } },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "sum by (otel_span_status_code) (rate({otel_metric_name=\"dash0.spans.duration_count\", service_name=\"api\", otel_span_kind=\"server\"}[$__interval]))",
+                    "seriesNameFormat": "{{otel_span_status_code}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
