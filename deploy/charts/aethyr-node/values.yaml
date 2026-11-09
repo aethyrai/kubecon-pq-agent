@@ -7,6 +7,7 @@ imagePullSecret: ghcr-pull
 tunnels:
   - { name: api, port: 7443 }
   - { name: mcp-server, port: 7444 }
+  - { name: identity, port: 7445 }
 configMap: aethyr-gateway-config
 tlsSecret: aethyr-gateway-tls
 seedSecret: aethyr-gateway-seed
