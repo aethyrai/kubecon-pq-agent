@@ -1,0 +1,11 @@
+image:
+  repository: ghcr.io/aethyrai/kubecon-pq-agent/ingest
+  tag: latest
+  pullPolicy: IfNotPresent
+source: fixture # fixture | live
+elasticsearch:
+  secretName: elasticsearch-api-key
+resources:
+  requests: { cpu: "1", memory: 1Gi }
+  limits: { cpu: "4", memory: 2Gi }
+ttlSecondsAfterFinished: 86400

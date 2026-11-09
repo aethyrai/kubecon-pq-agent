@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ingest
+description: Conference data ingest Job (LF schedule JSON -> Elasticsearch, local embeddings)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
