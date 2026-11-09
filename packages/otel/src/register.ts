@@ -27,8 +27,18 @@ const sdk = new NodeSDK({
   ],
 });
 sdk.start();
-const shutdown = (): void => {
-  sdk.shutdown().finally(() => process.exit(0));
+let stopping = false;
+/** Flush once. Signals exit the process after the flush; a natural exit (ingest on success) only flushes. */
+const shutdown = (exitAfter: boolean): void => {
+  if (stopping) return;
+  stopping = true;
+  sdk
+    .shutdown()
+    .catch(() => undefined)
+    .finally(() => {
+      if (exitAfter) process.exit(0);
+    });
 };
-process.once('SIGTERM', shutdown);
-process.once('SIGINT', shutdown);
+process.once('SIGTERM', () => shutdown(true));
+process.once('SIGINT', () => shutdown(true));
+process.once('beforeExit', () => shutdown(false));

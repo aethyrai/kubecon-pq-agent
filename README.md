@@ -4,7 +4,7 @@ A KubeCon NA 2026 conference agent. An MCP server and an accessible web client t
 
 Built for the Cloud Native Hackathon, Salt Lake City, November 9, 2026.
 
-Built with Gitar, Dash0, Radar, and Elasticsearch.
+Built with Gitar, Dash0, Radar, Elasticsearch, and OpenTelemetry.
 
 ## What it is
 
