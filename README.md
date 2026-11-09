@@ -4,6 +4,8 @@ A KubeCon NA 2026 conference agent. An MCP server and an accessible web client t
 
 Built for the Cloud Native Hackathon, Salt Lake City, November 9, 2026.
 
+Built with Gitar, Dash0, Radar, and Elasticsearch.
+
 ## What it is
 
 One Kubernetes cluster runs the whole product: Elasticsearch holds six indices built from the public KubeCon schedule, sponsor directory, and co-located event pages; `api` answers hybrid search (BM25 + local vector search fused with reciprocal rank fusion), recommendations, day schedules, conflict checks, booths, side events, and room accessibility; `mcp-server` exposes the same as eight MCP tools, a schedule resource, and a "plan my day" prompt; `web` is a Next.js client with full, text, and screen-reader modes. Embeddings run on the CPU inside the cluster, so no attendee query leaves it.
