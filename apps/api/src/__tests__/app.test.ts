@@ -59,7 +59,74 @@ test('GET /plan/conflicts finds the overlapping pair and reports missing ids', a
   const b = await json(res);
   assert.deepEqual(b.conflicts, [{ a: 's1', b: 's2', overlapMinutes: 15 }]);
   assert.deepEqual(b.missing, ['nope']);
-  assert.equal((await app.request('/plan/conflicts?ids=s1')).status, 400);
+  assert.equal((await app.request('/plan/conflicts?ids=')).status, 400);
+});
+
+test('GET /plan/conflicts accepts a plan with one pick', async () => {
+  const res = await app.request('/plan/conflicts?ids=s1');
+  assert.equal(res.status, 200);
+  const b = await json(res);
+  assert.deepEqual(b.conflicts, []);
+  assert.equal((b.sessions as unknown[]).length, 1);
+});
+
+test('GET /plan/conflicts carries tight connections labelled as estimates', async () => {
+  const b = await json(await app.request('/plan/conflicts?ids=s1,s3'));
+  assert.deepEqual(b.tight, []);
+  assert.equal(b.walk_basis, 'estimate');
+});
+
+test('GET /plan/next answers from the ids and the given time', async () => {
+  const res = await app.request('/plan/next?ids=s1,s3,nope&now=2026-11-10T13:00');
+  assert.equal(res.status, 200);
+  const b = await json(res);
+  assert.equal(b.state, 'free');
+  assert.equal(b.now, '2026-11-10T13:00:00');
+  assert.deepEqual(b.missing, ['nope']);
+  assert.equal(b.free_minutes, 60);
+  assert.equal(b.walk_basis, 'estimate');
+  const next = b.next as { session: Record<string, unknown>; leave_by: string };
+  assert.equal(next.session.id, 's3');
+  assert.equal('abstract' in next.session, false);
+  assert.equal(next.leave_by, '2026-11-10T14:00:00');
+  assert.deepEqual(
+    (b.during_gap as Array<{ id: string }>).map((l) => l.id),
+    ['lunch-1'],
+  );
+});
+
+test('GET /plan/next applies the from room', async () => {
+  const from = encodeURIComponent('Hyatt Regency | Level 4 | Regency Ballroom B-D');
+  const b = await json(await app.request(`/plan/next?ids=s3&now=2026-11-10T13:00&from=${from}`));
+  assert.equal((b.next as { walk_estimate_minutes: number }).walk_estimate_minutes, 12);
+});
+
+test('GET /plan/next with only unknown ids is no_plan', async () => {
+  const b = await json(await app.request('/plan/next?ids=nope&now=2026-11-10T13:00'));
+  assert.equal(b.state, 'no_plan');
+  assert.deepEqual(b.missing, ['nope']);
+});
+
+test('GET /plan/next rejects no ids, too many ids, and a bad time', async () => {
+  assert.equal((await app.request('/plan/next')).status, 400);
+  const many = Array.from({ length: 41 }, (_, i) => `x${i}`).join(',');
+  assert.equal((await app.request(`/plan/next?ids=${many}`)).status, 400);
+  assert.equal((await app.request('/plan/next?ids=s1&now=soon')).status, 400);
+  assert.equal((await app.request('/plan/next?ids=s1&now=')).status, 400);
+});
+
+test('GET /plan/next defaults to the venue clock', async () => {
+  const b = await json(await app.request('/plan/next?ids=s1'));
+  assert.match(String(b.now), /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+});
+
+test('GET /logistics filters by day, reports today, and validates the day', async () => {
+  const b = await json(await app.request('/logistics?day=2026-11-10'));
+  assert.equal(b.total, 1);
+  assert.match(String(b.today), /^\d{4}-\d{2}-\d{2}$/);
+  const none = await json(await app.request('/logistics?day=2026-11-12'));
+  assert.equal(none.total, 0);
+  assert.equal((await app.request('/logistics?day=2026-12-25')).status, 400);
 });
 
 test('overlaps and conflicts are pure and symmetric', () => {

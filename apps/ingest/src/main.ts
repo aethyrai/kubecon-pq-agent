@@ -3,6 +3,7 @@ import { embedderFromEnv } from '@kubecon-pq-agent/embeddings';
 import { clientFromEnv, ensureAllIndices } from '@kubecon-pq-agent/es-client';
 import { bulkUpsert } from './bulk.js';
 import {
+  normalizeLogistics,
   normalizeRooms,
   normalizeSessions,
   normalizeSpeakers,
@@ -89,10 +90,25 @@ const r2 = await bulkUpsert(client, 'speakers', withVec(speakers, speakerVectors
 const r3 = await bulkUpsert(client, 'rooms', rooms);
 const r4 = await bulkUpsert(client, 'exhibitors', withVec(exhibitors, exhibitorVectors));
 const r5 = await bulkUpsert(client, 'side_events', withVec(sideEvents, sideEventVectors));
-const results = { sessions: r1, speakers: r2, rooms: r3, exhibitors: r4, side_events: r5 };
+const r6 = await bulkUpsert(client, 'logistics', normalizeLogistics(data));
+const results = {
+  sessions: r1,
+  speakers: r2,
+  rooms: r3,
+  exhibitors: r4,
+  side_events: r5,
+  logistics: r6,
+};
 for (const [name, r] of Object.entries(results))
   console.log(`${name.padEnd(12)} ${r.indexed} indexed, ${r.errors} errors`);
-for (const alias of ['sessions', 'speakers', 'rooms', 'exhibitors', 'side_events'] as const) {
+for (const alias of [
+  'sessions',
+  'speakers',
+  'rooms',
+  'exhibitors',
+  'side_events',
+  'logistics',
+] as const) {
   const c = await client.count({ index: alias });
   console.log(`count ${alias}: ${c.count}`);
 }

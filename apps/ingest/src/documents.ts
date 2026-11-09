@@ -54,6 +54,17 @@ export interface ExhibitorDoc {
   embedding?: number[];
 }
 
+export interface LogisticsDoc {
+  id: string;
+  kind: 'registration' | 'coffee' | 'lunch';
+  title: string;
+  day: string;
+  start: string;
+  end: string;
+  room: string;
+  venue: string;
+}
+
 export interface SideEventDoc {
   id: string;
   name: string;

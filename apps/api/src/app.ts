@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { chaosDelay, mountChaos } from './chaos.js';
 import { type Conference, card, conflicts } from './conference.js';
 import { log } from './log.js';
+import { nextMove, parseLocalTime, tightConnections, venueNow, WALK_BASIS } from './next-move.js';
 
 export interface Readiness {
   /** True when Elasticsearch answered a health call recently. */
@@ -10,6 +11,18 @@ export interface Readiness {
 }
 
 const DAYS = new Set(['2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12']);
+const MAX_PLAN_IDS = 40;
+
+function idsFrom(v: string | undefined): string[] {
+  return [
+    ...new Set(
+      (v ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
 
 function filtersFrom(q: Record<string, string | boolean | undefined>): SessionFilters {
   const f: SessionFilters = {};
@@ -96,26 +109,48 @@ export function buildApp(
     return c.json({ day, total: sessions.length, sessions: sessions.map(card) });
   });
 
-  /** Given session ids, the overlapping pairs. */
+  /** Given session ids, the overlapping pairs and the back-to-back picks too far apart. */
   app.get('/plan/conflicts', async (c) => {
-    const ids = [
-      ...new Set(
-        (c.req.query('ids') ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-      ),
-    ];
-    if (ids.length < 2)
-      return c.json({ error: 'ids: at least two comma-separated session ids' }, 400);
+    const ids = idsFrom(c.req.query('ids'));
+    if (ids.length === 0) return c.json({ error: 'ids: at least one session id' }, 400);
     const sessions = await conf.sessionsById(ids);
     const found = new Set(sessions.map((s) => s.id));
     return c.json({
       ids,
       missing: ids.filter((i) => !found.has(i)),
       conflicts: conflicts(sessions),
+      tight: tightConnections(sessions),
+      walk_basis: WALK_BASIS,
       sessions: sessions.map(card),
     });
+  });
+
+  /** Where the attendee should be now and next. The plan arrives as ids; nothing is stored. */
+  app.get('/plan/next', async (c) => {
+    const ids = idsFrom(c.req.query('ids'));
+    if (ids.length === 0) return c.json({ error: 'ids: at least one session id' }, 400);
+    if (ids.length > MAX_PLAN_IDS)
+      return c.json({ error: `ids: at most ${MAX_PLAN_IDS} session ids` }, 400);
+    const rawNow = c.req.query('now');
+    const now = rawNow === undefined ? venueNow() : parseLocalTime(rawNow);
+    if (now === undefined)
+      return c.json({ error: 'now must be local time, YYYY-MM-DDTHH:MM[:SS]' }, 400);
+    const [sessions, logistics] = await Promise.all([
+      conf.sessionsById(ids),
+      conf.logistics(now.slice(0, 10)),
+    ]);
+    const found = new Set(sessions.map((s) => s.id));
+    const move = nextMove(sessions.map(card), now, logistics, c.req.query('from') || undefined);
+    return c.json({ ids, missing: ids.filter((i) => !found.has(i)), ...move });
+  });
+
+  /** Registration, coffee, and lunch, which the session index leaves out on purpose. */
+  app.get('/logistics', async (c) => {
+    const day = c.req.query('day');
+    if (day && !DAYS.has(day))
+      return c.json({ error: 'day must be 2026-11-08 to 2026-11-12' }, 400);
+    const items = await conf.logistics(day);
+    return c.json({ day: day ?? null, today: venueNow().slice(0, 10), total: items.length, items });
   });
 
   app.get('/booths', async (c) => {

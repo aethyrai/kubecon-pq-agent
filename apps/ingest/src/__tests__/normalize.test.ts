@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  normalizeLogistics,
   normalizeRooms,
   normalizeSessions,
   normalizeSpeakers,
@@ -32,6 +33,29 @@ test('service sessions such as registration are not talks', () => {
     sessions.some((s) => /registration \+ badge/i.test(s.title)),
     false,
   );
+});
+
+test('logistics keeps registration, coffee, and lunch, and no sponsor event', () => {
+  const items = normalizeLogistics(data);
+  const count = (kind: string) => items.filter((i) => i.kind === kind).length;
+  assert.equal(count('registration'), 5);
+  assert.equal(count('coffee'), 7);
+  assert.equal(count('lunch'), 4);
+  assert.equal(items.length, 16);
+  assert.equal(
+    items.some((i) => /separate registration/i.test(i.title)),
+    false,
+  );
+  for (const i of items) {
+    assert.match(i.title, /^[A-Z]/, `${i.title} keeps no leading emoji`);
+    assert.ok(i.room.length > 0, `${i.id} has a room`);
+    assert.match(i.day, /^2026-11-\d\d$/);
+  }
+});
+
+test('logistics rows do not become sessions', () => {
+  const sessionIds = new Set(normalizeSessions(data).map((s) => s.id));
+  for (const i of normalizeLogistics(data)) assert.equal(sessionIds.has(i.id), false);
 });
 
 test('every room in the schedule becomes a room document', () => {

@@ -2,10 +2,25 @@ import type { Client } from '@elastic/elasticsearch';
 import type { Embedder } from '@kubecon-pq-agent/embeddings';
 import { type Hit, hybridSearch } from '@kubecon-pq-agent/es-client';
 import { chaosDelay } from './chaos.js';
-import type { Conference, Exhibitor, Room, Session, SideEvent } from './conference.js';
+import type {
+  Conference,
+  Exhibitor,
+  LogisticsItem,
+  Room,
+  Session,
+  SideEvent,
+} from './conference.js';
 
 const SESSION_FIELDS = ['title^3', 'abstract', 'tags^2', 'speakers^2', 'track'];
 const EXHIBITOR_FIELDS = ['name^3', 'description', 'categories^2'];
+
+function isNotFound(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null || !('meta' in err)) return false;
+  const { meta } = err;
+  return (
+    typeof meta === 'object' && meta !== null && 'statusCode' in meta && meta.statusCode === 404
+  );
+}
 
 export function esConference(client: Client, embedder: Embedder): Conference {
   const vectorFor = async (text: string): Promise<number[] | undefined> => {
@@ -84,13 +99,23 @@ export function esConference(client: Client, embedder: Embedder): Conference {
         const res = await client.get<Room>({ index: 'rooms', id });
         return res.found ? res._source : undefined;
       } catch (err) {
-        if (
-          typeof err === 'object' &&
-          err !== null &&
-          'meta' in err &&
-          (err as { meta: { statusCode?: number } }).meta.statusCode === 404
-        )
-          return undefined;
+        if (isNotFound(err)) return undefined;
+        throw err;
+      }
+    },
+    async logistics(day): Promise<LogisticsItem[]> {
+      await chaosDelay();
+      try {
+        const res = await client.search<LogisticsItem>({
+          index: 'logistics',
+          size: 100,
+          query: day ? { term: { day } } : { match_all: {} },
+          sort: [{ start: 'asc' }],
+        });
+        return res.hits.hits.flatMap((h) => (h._source ? [h._source] : []));
+      } catch (err) {
+        // The api can roll out before the ingest job creates this index.
+        if (isNotFound(err)) return [];
         throw err;
       }
     },

@@ -8,8 +8,8 @@ import {
   VECTOR_FIELD,
 } from './mappings.js';
 
-test('six indices, each with a strict mapping', () => {
-  assert.equal(INDEX_NAMES.length, 6);
+test('seven indices, each with a strict mapping', () => {
+  assert.equal(INDEX_NAMES.length, 7);
   for (const name of INDEX_NAMES) {
     assert.equal(MAPPINGS[name].dynamic, 'strict', `${name} must be strict`);
     assert.ok(MAPPINGS[name].properties, `${name} has properties`);
@@ -33,6 +33,12 @@ test('rooms carries no vector', () => {
   assert.equal(VECTOR_FIELD.rooms, undefined);
   const props = MAPPINGS.rooms.properties ?? {};
   for (const p of Object.values(props)) assert.notEqual(p.type, 'dense_vector');
+});
+
+test('logistics carries no vector, so it stays out of semantic search', () => {
+  assert.equal(VECTOR_FIELD.logistics, undefined);
+  for (const p of Object.values(MAPPINGS.logistics.properties ?? {}))
+    assert.notEqual(p.type, 'dense_vector');
 });
 
 test('attendees stores only the pseudonymous peer_id as key', () => {

@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
   }
   let r: Awaited<ReturnType<typeof planConflicts>>;
   try {
-    r = await planConflicts(ids.length > 1 ? ids : [...ids, ids[0] ?? '']);
+    r = await planConflicts(ids);
   } catch (e) {
     return (
       <>
@@ -43,6 +43,8 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
   const days = [...new Set(sorted.map((s) => s.day))].sort();
   const without = (id: string) => `/plan?mode=${mode}&ids=${ids.filter((x) => x !== id).join(',')}`;
   const name = (id: string) => byId.get(id)?.title ?? `session ${id}`;
+  const tight = r.tight ?? [];
+  const minutes = (n: number) => `${n} minute${n === 1 ? '' : 's'}`;
   return (
     <>
       <h1>My plan</h1>
@@ -51,6 +53,9 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
         {days.length > 1 ? ` over ${days.length} days` : ''}, {r.conflicts.length} conflict
         {r.conflicts.length === 1 ? '' : 's'}.
       </output>
+      <p>
+        <a href={`/now?mode=${mode}&ids=${ids.join(',')}`}>Where to be now</a>
+      </p>
       {r.missing.length > 0 && (
         <p className="meta">
           {r.missing.length} pick{r.missing.length === 1 ? ' is' : 's are'} no longer in the program
@@ -82,6 +87,20 @@ export default async function Page({ searchParams }: PageProps<'/plan'>) {
                 </li>
               );
             })}
+          </ul>
+        </section>
+      )}
+      {tight.length > 0 && (
+        <section aria-labelledby="tight" className="conflicts">
+          <h2 id="tight">Tight connections</h2>
+          <ul>
+            {tight.map((t) => (
+              <li key={`${t.from}-${t.to}`}>
+                “{name(t.from)}” to “{name(t.to)}” leaves {minutes(t.gapMinutes)}. The walk is about{' '}
+                {minutes(t.walkMinutes)} (estimate), so expect to arrive about{' '}
+                {minutes(t.shortByMinutes)} late.
+              </li>
+            ))}
           </ul>
         </section>
       )}

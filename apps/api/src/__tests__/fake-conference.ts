@@ -1,5 +1,12 @@
 import type { Hit } from '@kubecon-pq-agent/es-client';
-import type { Conference, Exhibitor, Room, Session, SideEvent } from '../conference.js';
+import type {
+  Conference,
+  Exhibitor,
+  LogisticsItem,
+  Room,
+  Session,
+  SideEvent,
+} from '../conference.js';
 
 export const S = (
   id: string,
@@ -98,6 +105,20 @@ export function fakeConference(): Conference & { calls: string[] } {
         badge_required: false,
       };
       return !day || day === '2026-11-08' ? [ev] : [];
+    },
+    async logistics(day) {
+      calls.push(`logistics:${day ?? ''}`);
+      const lunch: LogisticsItem = {
+        id: 'lunch-1',
+        kind: 'lunch',
+        title: 'Lunch',
+        day: '2026-11-10',
+        start: '2026-11-10T12:50:00',
+        end: '2026-11-10T14:50:00',
+        room: 'Salt Palace | Level 1 | Halls A-C, Halls 1-5',
+        venue: 'Salt Palace',
+      };
+      return !day || day === lunch.day ? [lunch] : [];
     },
     async room(id) {
       const r: Room = {
