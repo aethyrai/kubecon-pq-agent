@@ -50,6 +50,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <footer>
           <p>
             Built on November 9, 2026. Aethyr Node is a pre-existing library.{' '}
+            <a href="/about">What was built today</a>
+            {' · '}
             <a href="https://github.com/aethyrai/kubecon-pq-agent" rel="noopener">
               Source on GitHub
             </a>
