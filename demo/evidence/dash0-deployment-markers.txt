@@ -1,0 +1,21 @@
+# dash0-deployment-markers
+recorded: 2026-11-09T14:41:21-07:00  host: aethyr-core  commit: 813afc7
+deployed: web web:sha-ff350ab
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl -n conf get jobs -l "app in (api-deploy-event,mcp-server-deploy-event,web-deploy-event)" -o custom-columns="NAME:.metadata.name,SUCCEEDED:.status.succeeded,FAILED:.status.failed"; for j in api mcp-server web; do kubectl -n conf logs job/$j-deploy-event-succeeded; done
+NAME                                SUCCEEDED   FAILED
+api-deploy-event-failed             <none>      1
+api-deploy-event-succeeded          1           <none>
+mcp-server-deploy-event-failed      <none>      1
+mcp-server-deploy-event-succeeded   1           <none>
+web-deploy-event-succeeded          1           <none>
+dash0.deployment api sha-ff350ab succeeded -> HTTP 200 {"partialSuccess":{}}
+dash0.deployment mcp-server sha-ff350ab succeeded -> HTTP 200 {"partialSuccess":{}}
+dash0.deployment web sha-ff350ab succeeded -> HTTP 200 {"partialSuccess":{}}
+exit: 0
+```
