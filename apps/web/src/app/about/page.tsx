@@ -87,8 +87,8 @@ export default async function Page({ searchParams }: PageProps<'/about'>) {
           promotion and every failed sync appears on the service charts with its image tag.
         </p>
         <p>
-          Every log line carries its trace id. Open a search in Dash0 logs and its full trace opens
-          with it, from the web client through the api to Elasticsearch.
+          Every request's log line carries its trace id. Open a search in Dash0 logs and its full
+          trace opens with it, from the web client through the api to Elasticsearch.
         </p>
         <p>
           Inside each search trace, the search.leg.bm25 and search.leg.knn spans show which
