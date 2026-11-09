@@ -7,7 +7,7 @@ import {
   SimpleSpanProcessor,
   TracerProvider,
 } from '@opentelemetry/sdk-trace';
-import { annotate, currentTraceId, withSpan } from './index.js';
+import { annotate, currentTraceId, traceMixin, withSpan } from './index.js';
 
 const exporter = new InMemorySpanExporter();
 const provider = new TracerProvider({ spanProcessors: [new SimpleSpanProcessor({ exporter })] });
@@ -40,4 +40,15 @@ test('withSpan records attributes, status, nesting, and errors', async () => {
   assert.equal(inner?.parentSpanContext?.spanId, outer?.spanContext().spanId);
   assert.equal(boom?.status.code, 2);
   assert.equal(boom?.events[0]?.name, 'exception');
+});
+
+test('traceMixin stamps trace_id and span_id inside a span and nothing outside', async () => {
+  const mixin = traceMixin();
+  assert.deepEqual(mixin(), {});
+  await withSpan('t', 'logged', {}, async (span) => {
+    const fields = mixin();
+    assert.equal(fields.trace_id, span.spanContext().traceId);
+    assert.equal(fields.span_id, span.spanContext().spanId);
+  });
+  assert.deepEqual(mixin(), {});
 });
