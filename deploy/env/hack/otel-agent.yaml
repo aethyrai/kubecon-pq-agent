@@ -33,8 +33,8 @@ config:
     otlp/dash0:
       endpoint: ${env:DASH0_ENDPOINT}
       headers:
-        Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
-        Dash0-Dataset: ${env:DASH0_DATASET}
+        authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+        dash0-dataset: ${env:DASH0_DATASET}
   service:
     pipelines:
       traces: null
