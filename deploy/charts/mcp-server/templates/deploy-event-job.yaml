@@ -55,9 +55,12 @@ spec:
                   {"key":"deployment.status","value":{"stringValue":"'"$STATUS"'"}},
                   {"key":"deployment.name","value":{"stringValue":"'"$SERVICE"'"}},
                   {"key":"deployment.id","value":{"stringValue":"'"$SERVICE-$VERSION"'"}}]}]}]}]}'
-              code="$(printf '%s' "$body" | curl -sS -o /tmp/resp -w '%{http_code}' -X POST \
-                -H 'content-type: application/json' --data-binary @- "$ENDPOINT/v1/logs")"
-              echo "dash0.deployment $SERVICE $VERSION $STATUS -> HTTP $code $(cat /tmp/resp)"
+              # Retries ride out the first seconds before the pod network is programmed; `|| echo 000`
+              # keeps `sh -e` from ending the script on a refused connection so the WARN line runs.
+              code="$(printf '%s' "$body" | curl -sS --retry 5 --retry-connrefused --retry-delay 2 \
+                -o /tmp/resp -w '%{http_code}' -X POST -H 'content-type: application/json' \
+                --data-binary @- "$ENDPOINT/v1/logs" || echo 000)"
+              echo "dash0.deployment $SERVICE $VERSION $STATUS -> HTTP $code $(cat /tmp/resp 2>/dev/null || true)"
               [ "$code" = 200 ] || echo "WARN marker not accepted (HTTP $code); deploy unaffected"
           resources:
             requests: { cpu: 10m, memory: 16Mi }
