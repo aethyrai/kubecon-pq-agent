@@ -21,3 +21,7 @@ env: []
 secretEnv: []
 otel:
   endpoint: http://otel-collector.observability.svc:4317
+# Dash0 deployment markers: PostSync and SyncFail hook Jobs post one dash0.deployment event.
+deployEvent:
+  image: curlimages/curl:8.11.1
+  endpoint: http://otel-collector.observability.svc:4318
