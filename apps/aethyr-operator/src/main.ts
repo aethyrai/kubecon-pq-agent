@@ -1,4 +1,4 @@
-import { annotate, withSpan } from '@kubecon-pq-agent/otel';
+import { annotate, traceMixin, withSpan } from '@kubecon-pq-agent/otel';
 import { API_GROUP, API_VERSION, CryptoPolicy, PQPeer, PQTunnel } from '@kubecon-pq-agent/schema';
 import pino from 'pino';
 import {
@@ -17,7 +17,11 @@ import { renderGatewayConfig } from './render.js';
  * compares the config hash, and only then writes the ConfigMap, rolls the gateway, patches
  * status, and records a Kubernetes Event that names the change.
  */
-const log = pino({ level: process.env.LOG_LEVEL ?? 'info', base: { service: 'aethyr-operator' } });
+const log = pino({
+  level: process.env.LOG_LEVEL ?? 'info',
+  base: { service: 'aethyr-operator' },
+  mixin: traceMixin(),
+});
 const kube = connect();
 const INTERVAL_MS = Number(process.env.RECONCILE_INTERVAL_MS ?? 5000);
 

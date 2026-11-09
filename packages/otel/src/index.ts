@@ -38,3 +38,14 @@ export function annotate(attributes: Attributes): void {
 export function currentTraceId(): string | undefined {
   return trace.getActiveSpan()?.spanContext().traceId;
 }
+
+/**
+ * pino `mixin` that stamps trace_id and span_id on every log line written inside a span, so
+ * Dash0 links the line to its trace. No instrumentation package needed; works with any pino.
+ */
+export function traceMixin(): () => Record<string, string> {
+  return () => {
+    const ctx = trace.getActiveSpan()?.spanContext();
+    return ctx ? { trace_id: ctx.traceId, span_id: ctx.spanId } : {};
+  };
+}

@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { traceMixin } from '@kubecon-pq-agent/otel';
 import { API_GROUP, API_VERSION, CryptoPolicy, type PQPeerSpec } from '@kubecon-pq-agent/schema';
 import * as k8s from '@kubernetes/client-node';
 import pino from 'pino';
@@ -8,7 +9,11 @@ import { isNotFound, SecretTokenStore } from './store.js';
 import { Trail } from './trail.js';
 import { SecretTrailStore } from './trail-store.js';
 
-const log = pino({ level: process.env.LOG_LEVEL ?? 'info', base: { service: 'identity' } });
+const log = pino({
+  level: process.env.LOG_LEVEL ?? 'info',
+  base: { service: 'identity' },
+  mixin: traceMixin(),
+});
 const ns = process.env.PEER_NAMESPACE ?? 'aethyr-system';
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
