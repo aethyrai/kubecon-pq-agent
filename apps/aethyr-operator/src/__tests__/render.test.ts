@@ -85,10 +85,18 @@ test('allowlist contains only admitted peers that have a DID, sorted', () => {
     peer('c', false, 'did:aethyr:device:zc'),
     peer('d', true),
   ]);
-  const lines = list.trim().split('\n').slice(1);
+  const dids = list.split('\n').filter((l) => l.startsWith('did:'));
+  assert.deepEqual(dids, ['did:aethyr:device:za', 'did:aethyr:device:zb']);
+  for (const l of list.split('\n')) {
+    assert.ok(l === '' || l.startsWith('#') || l.startsWith('did:'), `bad line: ${l}`);
+  }
+});
+
+test('an empty allowlist still has one loadable DID entry', () => {
+  const list = renderAllowlist([]);
   assert.deepEqual(
-    lines.map((l) => l.split(' ')[0]),
-    ['did:aethyr:device:za', 'did:aethyr:device:zb'],
+    list.split('\n').filter((l) => l.startsWith('did:')),
+    [SENTINEL_DID],
   );
 });
 
