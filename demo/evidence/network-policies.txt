@@ -1,0 +1,37 @@
+# network-policies
+recorded: 2026-11-09T15:17:46-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-1ffb105
+deployed: api api:sha-ff350ab
+deployed: mcp-server mcp-server:sha-ff350ab
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl get networkpolicies -A -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,TYPES:.spec.policyTypes"; echo; echo "count: $(kubectl get networkpolicies -A --no-headers | wc -l)"
+NAMESPACE       NAME                              TYPES
+aethyr-system   allow-from-conf-and-self          [Ingress]
+aethyr-system   allow-tunnel-peers                [Ingress]
+aethyr-system   default-deny-ingress              [Ingress]
+aethyr-system   identity-ingress                  [Ingress]
+argocd          argocd-application-controller     [Ingress]
+argocd          argocd-dex-server                 [Ingress]
+argocd          argocd-notifications-controller   [Ingress]
+argocd          argocd-redis                      [Ingress]
+argocd          argocd-repo-server                [Ingress]
+argocd          argocd-server                     [Ingress]
+conf            allow-egress-dependencies         [Egress]
+conf            allow-from-traefik-and-gateway    [Ingress]
+conf            allow-intra-namespace             [Ingress Egress]
+conf            default-deny                      [Ingress Egress]
+elastic         allow-dns                         [Egress]
+elastic         allow-from-conf                   [Ingress]
+elastic         allow-intra-namespace             [Ingress Egress]
+elastic         default-deny                      [Ingress Egress]
+observability   allow-otlp-from-cluster           [Ingress]
+observability   default-deny-ingress              [Ingress]
+radar           allow-from-traefik-and-self       [Ingress]
+radar           default-deny-ingress              [Ingress]
+
+count: 22
+exit: 0
+```

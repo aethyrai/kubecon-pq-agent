@@ -1,0 +1,14 @@
+# operator-change-log
+recorded: 2026-11-09T16:08:15-07:00  host: aethyr-core  commit: 35a98fd
+deployed: web web:sha-a504298
+deployed: api api:sha-a504298
+deployed: mcp-server mcp-server:sha-a504289
+deployed: identity identity:sha-ff350ab
+deployed: aethyr-operator aethyr-operator:sha-ff350ab
+
+```
+$ sh -c kubectl -n aethyr-system get events --sort-by=.lastTimestamp -o custom-columns="TIME:.lastTimestamp,COUNT:.count,REASON:.reason,MESSAGE:.message" | grep -E "GatewayConfigRendered|CryptoPolicyApplied|PQPeerAdmitted"
+2026-11-09T22:58:17Z   1        GatewayConfigRendered   config 3b9d9591a17cbe4f: hackathon: ML-KEM-1024/ML-DSA-87; 3 tunnel(s), 2 admitted peer(s); gateway rolled
+2026-11-09T22:58:17Z   1        CryptoPolicyApplied     hackathon generation 10: ML-KEM-1024 / ML-DSA-87 (cnsa2)
+exit: 0
+```
