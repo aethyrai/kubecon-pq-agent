@@ -1,4 +1,4 @@
 image:
-  tag: sha-f32be44
+  tag: sha-ff350ab
 env:
   - { name: API_URL, value: http://api.conf.svc }
