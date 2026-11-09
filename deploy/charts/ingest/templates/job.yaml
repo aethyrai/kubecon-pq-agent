@@ -27,6 +27,7 @@ spec:
           env:
             - { name: INGEST_SOURCE, value: {{ .Values.source | quote }} }
             - { name: FIXTURE_DIR, value: /app/fixtures/sched }
+            - { name: LF_FIXTURE_DIR, value: /app/fixtures/lf }
             - { name: EMBEDDER, value: local }
             - { name: MODEL_OFFLINE, value: "1" }
             - { name: MODEL_CACHE_DIR, value: /app/.model-cache }
