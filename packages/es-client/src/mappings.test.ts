@@ -23,6 +23,7 @@ test('every vector field is a 1536-dim cosine HNSW dense_vector', () => {
     assert.ok(prop && prop.type === 'dense_vector', `${name}.${field} is dense_vector`);
     if (prop.type === 'dense_vector') {
       assert.equal(prop.dims, EMBEDDING_DIMS);
+      assert.ok(prop.dims === 384 || prop.dims === 1536);
       assert.equal(prop.similarity, 'cosine');
     }
   }
