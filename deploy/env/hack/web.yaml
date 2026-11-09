@@ -1,4 +1,4 @@
 image:
-  tag: sha-ff350ab
+  tag: sha-1ffb105
 dash0:
   endpoint: https://ingress.us-west-2.aws.dash0.com
